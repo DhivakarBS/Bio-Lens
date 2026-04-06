@@ -1,233 +1,434 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import {
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Dimensions,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { RootStackParamList } from 'src/types/type';
+import { PieChart, ProgressChart } from 'react-native-chart-kit';
+import Animated, { FadeInUp } from 'react-native-reanimated';
+
+import GlassCard from '../components/GlassCard';
+import KPICard from '../components/KPICard';
+import SectionHeader from '../components/SectionHeader';
+import VerdictBanner from '../components/VerdictBanner';
+import { colors, spacing, typography } from '../theme';
+import { RootStackParamList } from '../types/type';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Result'>;
+
+const screenWidth = Dimensions.get('window').width - 48;
 
 export default function ResultScreen({ navigation, route }: Props) {
   const { result } = route.params;
 
-  // New ML response schema normalized
   const displayVerdict = result.verdict || 'NO DATA';
-  const verdictColor =
-    displayVerdict === 'SAFE'
-      ? '#2d8f4e'
-      : displayVerdict === 'CAUTION'
-      ? '#f0ad4e'
-      : displayVerdict === 'UNSAFE'
-      ? '#dc3545'
-      : '#6c757d';
-
   const waterQualityIndex =
-    result.waterQualityIndex !== undefined && result.waterQualityIndex !== null
+    typeof result.waterQualityIndex === 'number'
       ? result.waterQualityIndex
-      : 'N/A';
+      : 0;
 
-  const totalDiatoms =
-    result.totalDiatoms !== undefined && result.totalDiatoms !== null
-      ? result.totalDiatoms
-      : 'N/A';
+  const speciesBreakdown = result.speciesBreakdown || {};
+  const confidenceScores = result.confidenceScores || {};
+  const normalizedWQI = Math.min(
+    Math.max(waterQualityIndex / 100, 0),
+    1
+  );
+  const speciesEntries = Object.entries(speciesBreakdown);
 
-  const speciesBreakdown: Record<string, number> =
-    result.speciesBreakdown && typeof result.speciesBreakdown === 'object'
-      ? result.speciesBreakdown
-      : {};
+const dominantSpecies =
+  speciesEntries.length > 0
+    ? speciesEntries.reduce((max, current) =>
+        Number(current[1]) > Number(max[1]) ? current : max
+      )[0]
+    : 'Unknown';
+  const totalSpeciesCount = speciesEntries.reduce(
+  (sum, [, count]) => sum + Number(count),
+  0
+);
 
-  const confidenceScores: Record<string, number> =
-    result.confidenceScores && typeof result.confidenceScores === 'object'
-      ? result.confidenceScores
-      : {};
+const dominantCount =
+  speciesEntries.length > 0
+    ? Number(
+        speciesEntries.reduce((max, current) =>
+          Number(current[1]) > Number(max[1]) ? current : max
+        )[1]
+      )
+    : 0;
 
-  const recordId = result.recordId || 'N/A';
-  const timestamp = result.timestamp || 'N/A';
+const derivedConfidence =
+  totalSpeciesCount > 0
+    ? Math.round((dominantCount / totalSpeciesCount) * 100)
+    : 0;
+
+  const speciesChart = Object.entries(speciesBreakdown).map(
+    ([name, count], index) => ({
+      name,
+      population: Number(count),
+      color: [
+        colors.primary,
+        colors.accentDeep,
+        colors.caution,
+        colors.danger,
+        '#4CAF50',
+        '#9E9E9E',
+      ][index % 6],
+      legendFontColor: colors.textMuted,
+      legendFontSize: 12,
+    })
+  );
+
+  const riskColor =
+    displayVerdict === 'SAFE'
+      ? colors.success
+      : displayVerdict === 'CAUTION'
+      ? colors.caution
+      : colors.danger;
+
+  const verdictSuggestions: Record<string, string[]> = {
+    SAFE: [
+      'Maintain monthly monitoring schedule.',
+      'Preserve surrounding vegetation buffer zones.',
+      'Continue low-impact ecological management.',
+    ],
+    CAUTION: [
+      'Increase sampling frequency in nearby sites.',
+      'Inspect upstream nutrient or sewage inflow.',
+      'Validate pH and conductivity within 48 hours.',
+    ],
+    UNSAFE: [
+      'Immediate field inspection is recommended.',
+      'Check for industrial discharge or contamination.',
+      'Deploy rapid mitigation and notify authorities.',
+    ],
+    'NO DATA': [
+      'Insufficient data for recommendation.',
+      'Run another scan with clearer microscopy image.',
+    ],
+  };
+
+  const recommendations =
+    verdictSuggestions[displayVerdict] ||
+    verdictSuggestions['NO DATA'];
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.title}>BioLens Water Quality Report</Text>
+    <ScrollView
+      style={styles.screen}
+      contentContainerStyle={styles.contentContainer}
+      showsVerticalScrollIndicator={false}
+    >
+      <VerdictBanner
+        verdict={displayVerdict}
+        subtext="BioLens AI classification complete. Review the ecological intelligence dashboard and recommended mitigation workflow."
+      />
+
+      <View style={styles.dashboardRow}>
+        <View style={styles.sideColumn}>
+          <KPICard
+            title="WQI"
+            value={waterQualityIndex.toFixed(1)}
+            label="Water Quality Index"
+            accent={colors.primary}
+          />
+
+          <KPICard
+            title="Dominant"
+            value={dominantSpecies}
+            label="Top species"
+            accent={colors.caution}
+          />
+        </View>
+
+        <GlassCard style={styles.centerChartCard}>
+          <SectionHeader
+            title="Species Breakdown"
+            subtitle="Diatom distribution"
+          />
+
+          {speciesChart.length > 0 ? (
+            <>
+             <View style={styles.chartContainer}>
+              <PieChart
+                data={speciesChart}
+                width={300}
+                height={220}
+                chartConfig={chartConfig}
+                accessor="population"
+                backgroundColor="transparent"
+                paddingLeft="40"
+                absolute
+                hasLegend={false}
+              />
+            </View>
+
+              <View style={styles.legendWrapper}>
+                {speciesChart.map((item) => (
+                  <View key={item.name} style={styles.legendItem}>
+                    <View
+                      style={[
+                        styles.legendDot,
+                        { backgroundColor: item.color },
+                      ]}
+                    />
+                    <Text style={styles.legendText}>
+                      {item.name}: {item.population}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            </>
+          ) : (
+            <Text style={styles.naText}>No species data</Text>
+          )}
+        </GlassCard>
+
+        <View style={styles.sideColumn}>
+          <KPICard
+            title="Confidence"
+            value={`${derivedConfidence}%`}
+            label="Dominance strength"
+            accent={colors.accentDeep}
+          />
+
+          <KPICard
+            title="Risk"
+            value={displayVerdict}
+            label="Operational priority"
+            accent={riskColor}
+          />
+        </View>
       </View>
 
-      {/* Verdict Card */}
-      <View style={[styles.verdictCard, { borderLeftColor: verdictColor }]}>
-        <Text style={[styles.verdictText, { color: verdictColor }]}>
-          {displayVerdict}
+      {/* <GlassCard style={styles.progressCard}>
+        <SectionHeader
+          title="Ecological Health Meter"
+          subtitle="Normalized ecosystem performance"
+        />
+
+        <ProgressChart
+          data={{ data: [normalizedWQI] }}
+          width={screenWidth}
+          height={180}
+          strokeWidth={14}
+          radius={54}
+          chartConfig={chartConfig}
+          hideLegend
+        />
+
+        <Text style={styles.qualityText}>
+          {`${Math.round(
+            normalizedWQI * 100
+          )}% of ideal ecosystem score`}
         </Text>
-        <Text style={styles.wqiText}>
-          WQI: {waterQualityIndex}
-        </Text>
-        <Text style={styles.totalText}>
-          Total Diatoms: {totalDiatoms}
-        </Text>
-      </View>
+      </GlassCard> */}
 
-      {/* Species Breakdown */}
-      <View style={styles.sectionContainer}>
-        <Text style={styles.sectionTitle}>Species Breakdown</Text>
+      <SectionHeader
+        title="Recommended Actions"
+        subtitle="AI-driven environmental advisory"
+      />
 
-        {Object.entries(speciesBreakdown).map(([species, count]) => (
-          <View key={species} style={styles.speciesRow}>
-            <Text style={styles.speciesName}>{species}</Text>
-            <Text style={styles.speciesCount}>{String(count)}</Text>
-          </View>
-        ))}
-      </View>
-
-      {/* Confidence Scores */}
-      <View style={styles.sectionContainer}>
-        <Text style={styles.sectionTitle}>Average AI Confidence</Text>
-
-        {Object.entries(confidenceScores).map(([species, score]) => (
-          <View key={species} style={styles.speciesRow}>
-            <Text style={styles.speciesName}>{species}</Text>
-            <Text style={styles.speciesCount}>
-              {(Number(score) * 100).toFixed(1)}%
+      {recommendations.map((tip, index) => (
+        <Animated.View
+          key={tip}
+          entering={FadeInUp.delay(index * 80).duration(450)}
+        >
+          <GlassCard style={styles.insightCard}>
+            <Text style={styles.recommendationText}>
+              • {tip}
             </Text>
-          </View>
-        ))}
-      </View>
+          </GlassCard>
+        </Animated.View>
+      ))}
 
-      {/* Action Buttons */}
       <View style={styles.actionGroup}>
         <TouchableOpacity
           style={styles.primaryButton}
           onPress={() => navigation.navigate('History')}
         >
-          <Text style={styles.primaryButtonText}>View History</Text>
+          <Text style={styles.primaryButtonText}>
+            Review Full History
+          </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.secondaryButton}
           onPress={() => navigation.navigate('Upload')}
         >
-          <Text style={styles.secondaryButtonText}>Analyze Another Sample</Text>
+          <Text style={styles.secondaryButtonText}>
+            Run New Scan
+          </Text>
         </TouchableOpacity>
       </View>
 
-      {/* Record Info */}
-      <View style={styles.recordInfo}>
-        <Text style={styles.recordLabel}>Record ID</Text>
-        <Text style={styles.recordId}>{result.recordId}</Text>
-      </View>
+      <GlassCard style={styles.metaCard}>
+        <SectionHeader title="Record Metadata" />
+
+        <Text style={styles.metaLabel}>Record ID</Text>
+        <Text style={styles.metaValue}>
+          {result.recordId || 'N/A'}
+        </Text>
+
+        <Text style={styles.metaLabel}>Timestamp</Text>
+        <Text style={styles.metaValue}>
+          {result.timestamp || 'N/A'}
+        </Text>
+      </GlassCard>
     </ScrollView>
   );
 }
 
+const chartConfig = {
+  backgroundGradientFrom: '#ffffff',
+  backgroundGradientTo: '#ffffff',
+  color: (opacity = 1) => `rgba(45, 90, 61, ${opacity})`,
+  labelColor: (opacity = 1) => `rgba(47, 67, 54, ${opacity})`,
+  strokeWidth: 2,
+};
+
 const styles = StyleSheet.create({
-  container: {
+  screen: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: colors.background,
   },
+
   contentContainer: {
-    paddingHorizontal: 16,
-    paddingVertical: 20,
+    padding: spacing.lg,
+    paddingBottom: spacing.xxl,
   },
-  header: {
-    marginBottom: 20,
+
+  dashboardRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.xl,
+    gap: spacing.lg,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#1a1a1a',
+
+  sideColumn: {
+    width: 160,
+    justifyContent: 'space-between',
+    gap: spacing.lg,
   },
-  verdictCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 20,
-    marginBottom: 20,
-    borderLeftWidth: 6,
+
+  centerChartCard: {
+    width: 420,
+    minHeight: 380,
+    marginHorizontal: spacing.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  verdictText: {
-    fontSize: 28,
-    fontWeight: '700',
-    marginBottom: 12,
+
+ chartContainer: {
+  width: '100%',
+  alignItems: 'center',
+  justifyContent: 'center',
+  marginTop: spacing.sm,
+  paddingLeft: 20,
+},
+
+  legendWrapper: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    marginTop: spacing.md,
+    paddingHorizontal: spacing.md,
+    gap: spacing.md,
   },
-  wqiText: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#333',
+
+  legendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 6,
     marginBottom: 6,
   },
-  totalText: {
-    fontSize: 16,
-    color: '#666',
+
+  legendDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    marginRight: 6,
   },
-  sectionContainer: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
+
+  legendText: {
+    fontSize: typography.small,
+    color: colors.textMuted,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    marginBottom: 14,
-    color: '#1a1a1a',
+
+  naText: {
+    color: colors.textMuted,
+    fontSize: typography.body,
   },
-  speciesRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+
+  progressCard: {
+    marginBottom: spacing.lg,
   },
-  speciesName: {
-    fontSize: 15,
-    color: '#333',
+
+  qualityText: {
+    marginTop: spacing.md,
+    color: colors.textMuted,
+    fontSize: typography.body,
+    textAlign: 'center',
   },
-  speciesCount: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#2d5a3d',
+
+  insightCard: {
+    marginBottom: spacing.sm,
   },
+
+  recommendationText: {
+    color: colors.text,
+    fontSize: typography.body,
+    lineHeight: 24,
+  },
+
   actionGroup: {
-    gap: 12,
-    marginVertical: 20,
+    marginTop: spacing.lg,
+    gap: spacing.sm,
   },
+
   primaryButton: {
-    backgroundColor: '#2d5a3d',
-    paddingVertical: 14,
-    borderRadius: 8,
+    backgroundColor: colors.primary,
+    borderRadius: 24,
+    paddingVertical: spacing.md,
     alignItems: 'center',
+    marginBottom: spacing.sm,
   },
+
   primaryButtonText: {
     color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: typography.body,
+    fontWeight: typography.weightBold,
   },
+
   secondaryButton: {
-    backgroundColor: '#e8f0eb',
-    paddingVertical: 14,
-    borderRadius: 8,
+    backgroundColor: colors.surface,
+    borderWidth: 1.2,
+    borderColor: colors.primary,
+    borderRadius: 24,
+    paddingVertical: spacing.md,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#2d5a3d',
   },
+
   secondaryButtonText: {
-    color: '#2d5a3d',
-    fontSize: 16,
-    fontWeight: '600',
+    color: colors.primary,
+    fontSize: typography.body,
+    fontWeight: typography.weightBold,
   },
-  recordInfo: {
-    backgroundColor: '#f0f0f0',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 20,
+
+  metaCard: {
+    marginTop: spacing.lg,
   },
-  recordLabel: {
-    fontSize: 12,
-    color: '#999',
-    marginBottom: 4,
+
+  metaLabel: {
+    color: colors.textMuted,
+    fontSize: typography.small,
+    marginTop: spacing.sm,
   },
-  recordId: {
-    fontSize: 12,
-    color: '#666',
-    fontFamily: 'monospace',
+
+  metaValue: {
+    color: colors.text,
+    fontSize: typography.body,
+    fontWeight: typography.weightSemiBold,
   },
 });

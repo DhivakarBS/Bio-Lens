@@ -2,7 +2,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { RootStackParamList } from 'src/types/type';
 
 // Import ALL screens
-import HomeScreen from '../screens/HomeScreen';
+import BottomTabs from './BottomTabs';
 import LoginScreen from '../screens/LoginScreen';
 
 import HistoryScreen from 'src/screens/HistoryScreen';
@@ -20,13 +20,13 @@ export default function AppNavigator() {
       initialRouteName="Login"
       screenOptions={{ headerShown: false }}
     >
-      <Stack.Screen name="Home" component={HomeScreen} />
+      <Stack.Screen name="Home" component={BottomTabs} />
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="Signup" component={SignupScreen} />
       <Stack.Screen name="ProjectInfo" component={ProjectInfoScreen} />
       <Stack.Screen name="Upload" component={UploadScreen} />
       <Stack.Screen name="AdminLogin" component={AdminLoginScreen} />
-      <Stack.Screen name= "Result" component={ResultScreen}/>
+      <Stack.Screen name="Result" component={ResultScreen} />
       <Stack.Screen name="History" component={HistoryScreen} />
       <Stack.Screen name="Profile" component={ProfileScreen} />
     </Stack.Navigator>

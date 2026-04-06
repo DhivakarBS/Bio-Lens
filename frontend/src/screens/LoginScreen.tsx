@@ -12,9 +12,15 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import Animated, {
+  FadeInDown,
+  FadeInUp,
+} from 'react-native-reanimated';
 
-import { authService } from 'src/services';
-import { RootStackParamList } from 'src/types/type';
+import GlassCard from '../components/GlassCard';
+import { authService } from '../services';
+import { RootStackParamList } from '../types/type';
+import { colors, spacing, typography } from '../theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
 
@@ -22,7 +28,10 @@ export default function LoginScreen({ navigation }: Props) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [errors, setErrors] = useState<{
+    email?: string;
+    password?: string;
+  }>({});
 
   const validateForm = () => {
     const newErrors: typeof errors = {};
@@ -42,22 +51,26 @@ export default function LoginScreen({ navigation }: Props) {
   };
 
   const handleLogin = async () => {
-    console.log("Login button pressed");
     if (!validateForm()) return;
 
     setIsLoading(true);
 
     try {
       const response = await authService.login(email, password);
-console.log("Login response:", response);
 
-      if (response && response.token) {
+      if (response?.token) {
         await AsyncStorage.setItem('userToken', response.token);
-        await AsyncStorage.setItem('user', JSON.stringify(response.user));
+        await AsyncStorage.setItem(
+          'user',
+          JSON.stringify(response.user)
+        );
 
         navigation.navigate('ProjectInfo');
       } else {
-        Alert.alert('Login Failed', 'Invalid credentials or server error');
+        Alert.alert(
+          'Login Failed',
+          'Invalid credentials or server error'
+        );
       }
     } catch (error: any) {
       const errorMessage =
@@ -71,83 +84,107 @@ console.log("Login response:", response);
     }
   };
 
-  const handleSignupNavigation = () => {
-    navigation.navigate('Signup');
-  };
-
   return (
     <ScrollView style={styles.container}>
-      <View style={styles.header}>
+      <Animated.View
+        entering={FadeInDown.duration(650)}
+        style={styles.hero}
+      >
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.navigate('Home')}
         >
-          <Ionicons name="arrow-back" size={28} color="#2d5a3d" />
+          <Ionicons
+            name="arrow-back"
+            size={24}
+            color={colors.primary}
+          />
         </TouchableOpacity>
 
         <Text style={styles.title}>BioLens</Text>
-        <Text style={styles.subtitle}>Diatom Classification</Text>
-      </View>
+        <Text style={styles.subtitle}>
+          Premium Diatom Intelligence Portal
+        </Text>
+      </Animated.View>
 
-      <View style={styles.form}>
-        <Text style={styles.label}>Email</Text>
-
-        <TextInput
-          style={[styles.input, errors.email && styles.inputError]}
-          placeholder="Enter your email"
-          placeholderTextColor="#999"
-          value={email}
-          onChangeText={setEmail}
-          editable={!isLoading}
-          keyboardType="email-address"
-          autoCapitalize="none"
-        />
-
-        {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
-
-        <Text style={styles.label}>Password</Text>
-
-        <TextInput
-          style={[styles.input, errors.password && styles.inputError]}
-          placeholder="Enter your password"
-          placeholderTextColor="#999"
-          value={password}
-          onChangeText={setPassword}
-          editable={!isLoading}
-          secureTextEntry
-        />
-
-        {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
-
-        <TouchableOpacity
-          style={[styles.button, isLoading && styles.buttonDisabled]}
-          onPress={handleLogin}
-          disabled={isLoading}
-        >
-          {isLoading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.buttonText}>Login</Text>
-          )}
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          onPress={handleSignupNavigation}
-          style={styles.signupLinkContainer}
-        >
-          <Text style={styles.link}>
-            Don't have an account? <Text style={styles.linkBold}>Sign up</Text>
+      <Animated.View entering={FadeInUp.duration(700)}>
+        <GlassCard style={styles.formCard}>
+          <Text style={styles.formTitle}>Welcome Back</Text>
+          <Text style={styles.formSubtitle}>
+            Sign in to access your environmental intelligence dashboard
           </Text>
-        </TouchableOpacity>
 
-        <TouchableOpacity
-          onPress={() => navigation.navigate('AdminLogin')}
-          disabled={isLoading}
-          style={styles.adminLink}
-        >
-          <Text style={styles.adminLinkText}>Admin Login</Text>
-        </TouchableOpacity>
-      </View>
+          <Text style={styles.label}>Email Address</Text>
+          <TextInput
+            style={[styles.input, errors.email && styles.inputError]}
+            placeholder="researcher@biolens.ai"
+            placeholderTextColor="#9ca3af"
+            value={email}
+            onChangeText={setEmail}
+            editable={!isLoading}
+            keyboardType="email-address"
+            autoCapitalize="none"
+          />
+          {errors.email && (
+            <Text style={styles.errorText}>{errors.email}</Text>
+          )}
+
+          <Text style={styles.label}>Password</Text>
+          <TextInput
+            style={[
+              styles.input,
+              errors.password && styles.inputError,
+            ]}
+            placeholder="Enter secure password"
+            placeholderTextColor="#9ca3af"
+            value={password}
+            onChangeText={setPassword}
+            editable={!isLoading}
+            secureTextEntry
+          />
+          {errors.password && (
+            <Text style={styles.errorText}>
+              {errors.password}
+            </Text>
+          )}
+
+          <TouchableOpacity
+            style={[
+              styles.button,
+              isLoading && styles.buttonDisabled,
+            ]}
+            onPress={handleLogin}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.buttonText}>
+                Access Dashboard
+              </Text>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => navigation.navigate('Signup')}
+            style={styles.signupLinkContainer}
+          >
+            <Text style={styles.link}>
+              New to BioLens?{' '}
+              <Text style={styles.linkBold}>Create Account</Text>
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => navigation.navigate('AdminLogin')}
+            style={styles.adminLink}
+          >
+            <Text style={styles.adminLinkText}>
+              Secure Admin Access
+            </Text>
+          </TouchableOpacity>
+        </GlassCard>
+      </Animated.View>
     </ScrollView>
   );
 }
@@ -155,79 +192,95 @@ console.log("Login response:", response);
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
   },
 
-  header: {
-    paddingTop: 60,
-    paddingBottom: 40,
+  hero: {
+    paddingTop: spacing.xxl + 20,
+    paddingBottom: spacing.xl,
     alignItems: 'center',
-    backgroundColor: '#2d5a3d',
+    backgroundColor: colors.primary,
+    borderBottomLeftRadius: 34,
+    borderBottomRightRadius: 34,
   },
 
   title: {
-    fontSize: 32,
-    fontWeight: 'bold',
+    fontSize: 34,
+    fontWeight: typography.weightBold,
     color: '#fff',
+    letterSpacing: 0.4,
   },
 
   subtitle: {
-    fontSize: 14,
-    color: '#d0d0d0',
-    marginTop: 8,
+    fontSize: typography.body,
+    color: 'rgba(255,255,255,0.82)',
+    marginTop: spacing.xs,
   },
 
-  form: {
-    padding: 24,
-    maxWidth: 600,
-    alignSelf: 'center',
-    width: '100%',
+  formCard: {
+    marginTop: -30,
+    marginHorizontal: spacing.lg,
+    padding: spacing.xl,
+    borderRadius: 30,
+  },
+
+  formTitle: {
+    fontSize: typography.heading3,
+    fontWeight: typography.weightBold,
+    color: colors.text,
+    marginBottom: spacing.xs,
+  },
+
+  formSubtitle: {
+    color: colors.textMuted,
+    marginBottom: spacing.lg,
+    lineHeight: 22,
   },
 
   input: {
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 14,
-    color: '#333',
-    backgroundColor: '#f9f9f9',
+    borderColor: colors.border,
+    borderRadius: 18,
+    padding: spacing.md,
+    fontSize: typography.body,
+    color: colors.text,
+    backgroundColor: '#fff',
     width: '100%',
   },
 
   backButton: {
     position: 'absolute',
-    top: 40,
-    left: 20,
+    top: spacing.xl,
+    left: spacing.lg,
     zIndex: 500,
     backgroundColor: '#fff',
-    borderRadius: 50,
-    padding: 2,
+    borderRadius: 999,
+    padding: 8,
   },
 
   label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
-    marginTop: 16,
+    fontSize: typography.small,
+    fontWeight: typography.weightSemiBold,
+    color: colors.text,
+    marginBottom: spacing.xs,
+    marginTop: spacing.md,
   },
 
   inputError: {
-    borderColor: '#ff6b6b',
+    borderColor: colors.danger,
   },
 
   errorText: {
-    color: '#ff6b6b',
-    fontSize: 12,
+    color: colors.danger,
+    fontSize: typography.micro,
     marginTop: 4,
   },
 
   button: {
-    backgroundColor: '#2d5a3d',
-    borderRadius: 8,
-    padding: 16,
-    marginTop: 24,
+    backgroundColor: colors.primary,
+    borderRadius: 20,
+    padding: spacing.md,
+    marginTop: spacing.lg,
     alignItems: 'center',
   },
 
@@ -237,38 +290,38 @@ const styles = StyleSheet.create({
 
   buttonText: {
     color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: typography.body,
+    fontWeight: typography.weightBold,
+    letterSpacing: 0.4,
   },
 
   link: {
-    marginTop: 16,
     textAlign: 'center',
-    color: '#666',
-    fontSize: 14,
+    color: colors.textMuted,
+    fontSize: typography.body,
   },
 
   linkBold: {
-    fontWeight: '600',
-    color: '#2d5a3d',
+    fontWeight: typography.weightBold,
+    color: colors.primary,
   },
 
   adminLink: {
-    marginTop: 24,
-    paddingTop: 16,
+    marginTop: spacing.lg,
+    paddingTop: spacing.md,
     borderTopWidth: 1,
-    borderTopColor: '#eee',
+    borderTopColor: colors.border,
   },
 
   adminLinkText: {
     textAlign: 'center',
-    color: '#2d5a3d',
-    fontSize: 14,
-    fontWeight: '600',
+    color: colors.primaryDark,
+    fontSize: typography.body,
+    fontWeight: typography.weightBold,
   },
 
   signupLinkContainer: {
-    marginTop: 20,
+    marginTop: spacing.lg,
     alignItems: 'center',
   },
 });

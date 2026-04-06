@@ -1,14 +1,22 @@
-import { useNavigation } from "@react-navigation/native";
-import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
   Image,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
-  View
-} from "react-native";
-import Icon from "react-native-vector-icons/MaterialCommunityIcons";
+  View,
+} from 'react-native';
+import Animated, {
+  FadeInDown,
+  FadeInUp,
+} from 'react-native-reanimated';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+
+import GlassCard from '../components/GlassCard';
+import SectionHeader from '../components/SectionHeader';
+import { colors, spacing, typography } from '../theme';
 
 type RootStackParamList = {
   ProjectInfo: undefined;
@@ -17,83 +25,140 @@ type RootStackParamList = {
 
 type NavigationProp = NativeStackNavigationProp<
   RootStackParamList,
-  "ProjectInfo"
+  'ProjectInfo'
 >;
 
 const ProjectInfoScreen = () => {
   const navigation = useNavigation<NavigationProp>();
 
+  const workflowSteps = [
+    {
+      icon: 'camera-outline',
+      text: 'Capture microscope images of diatoms',
+    },
+    {
+      icon: 'target',
+      text: 'YOLO detects diatom objects in the image',
+    },
+    {
+      icon: 'brain',
+      text: 'CNN extracts features for intelligent classification',
+    },
+    {
+      icon: 'chart-line',
+      text: 'System predicts environmental conditions',
+    },
+  ];
+
+  const applications = [
+    '🌊 Water Quality Monitoring',
+    '🌍 Climate Change Analysis',
+    '⚠ Disaster Prediction',
+    '🧬 Public Health Early Warning',
+  ];
+
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      
-      {/* Banner */}
-      <Image
-        source={require("../../assets/1.png")}
-        style={styles.banner}
-      />
+    <ScrollView
+      contentContainerStyle={styles.container}
+      showsVerticalScrollIndicator={false}
+    >
+      <Animated.View entering={FadeInDown.duration(650)}>
+        <Image
+          source={require('../../assets/1.png')}
+          style={styles.banner}
+        />
+      </Animated.View>
 
-      {/* Title */}
-      <Text style={styles.title}>BioLens Project</Text>
-      <Text style={styles.subtitle}>AI Powered Diatom Monitoring</Text>
-
-      {/* Overview Card */}
-      <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Overview</Text>
-        <Text style={styles.text}>
-         BioLens is an AI-based environmental monitoring system that uses
-Convolutional Neural Networks (CNN) and YOLO object detection to
-identify and analyze diatom species from microscopic images. The
-system automatically detects diatoms and analyzes their patterns
-to provide insights about water quality and potential ecological risks.
+      <Animated.View entering={FadeInUp.duration(650)}>
+        <Text style={styles.title}>BioLens Project</Text>
+        <Text style={styles.subtitle}>
+          Premium AI-Powered Diatom Intelligence Platform
         </Text>
-      </View>
+      </Animated.View>
 
-      {/* How It Works */}
-      <View style={styles.card}>
-  <Text style={styles.sectionTitle}>How It Works</Text>
+      <GlassCard style={styles.heroCard}>
+        <SectionHeader
+          title="Executive Overview"
+          subtitle="Enterprise-grade environmental intelligence"
+        />
 
-  <View style={styles.row}>
-    <Icon name="camera-outline" size={20} color="#2d5a3d" />
-    <Text style={styles.text}> Capture microscope images of diatoms</Text>
-  </View>
+        <Text style={styles.bodyText}>
+          BioLens is an AI-based environmental monitoring system
+          that uses Convolutional Neural Networks (CNN) and YOLO
+          object detection to identify and analyze diatom species
+          from microscopic imagery. The platform automatically
+          detects taxa patterns and translates them into reliable
+          ecological risk intelligence for proactive water quality
+          decision-making.
+        </Text>
+      </GlassCard>
 
-  <View style={styles.row}>
-    <Icon name="target" size={20} color="#2d5a3d" />
-    <Text style={styles.text}> YOLO detects diatom objects in the image</Text>
-  </View>
+      <GlassCard style={styles.card}>
+        <SectionHeader
+          title="AI Workflow Pipeline"
+          subtitle="How BioLens transforms images into intelligence"
+        />
 
-  <View style={styles.row}>
-    <Icon name="brain" size={20} color="#2d5a3d" />
-    <Text style={styles.text}> CNN extracts visual features for classification</Text>
-  </View>
+        {workflowSteps.map((step, index) => (
+          <Animated.View
+            key={step.text}
+            entering={FadeInUp.delay(index * 120).duration(450)}
+            style={styles.row}
+          >
+            <View style={styles.iconCircle}>
+              <Icon
+                name={step.icon}
+                size={22}
+                color={colors.primary}
+              />
+            </View>
 
-  <View style={styles.row}>
-    <Icon name="chart-line" size={20} color="#2d5a3d" />
-    <Text style={styles.text}> System predicts environmental conditions</Text>
-  </View>
-</View>
-      {/* Applications */}
-      <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Applications</Text>
+            <Text style={styles.workflowText}>{step.text}</Text>
+          </Animated.View>
+        ))}
+      </GlassCard>
+
+      <GlassCard style={styles.card}>
+        <SectionHeader
+          title="Strategic Applications"
+          subtitle="High-impact real-world deployment areas"
+        />
 
         <View style={styles.featureBox}>
-          <Text style={styles.feature}>🌊 Water Quality Monitoring</Text>
-          <Text style={styles.feature}>🌍 Climate Change Analysis</Text>
-          <Text style={styles.feature}>⚠ Disaster Prediction</Text>
-          <Text style={styles.feature}>🧬 Public Health Early Warning</Text>
+          {applications.map((item, index) => (
+            <Animated.View
+              key={item}
+              entering={FadeInUp.delay(index * 100).duration(450)}
+            >
+              <Text style={styles.feature}>{item}</Text>
+            </Animated.View>
+          ))}
         </View>
-      </View>
+      </GlassCard>
 
-      {/* Progress */}
-      
-      {/* Button */}
+      <GlassCard style={styles.highlightCard}>
+        <SectionHeader
+          title="Why It Matters"
+          subtitle="The future of AI-driven environmental diagnostics"
+        />
+
+        <Text style={styles.bodyText}>
+          By combining diatom ecology with modern computer vision,
+          BioLens provides a scalable platform for river health
+          monitoring, climate analytics, disaster early warning,
+          and research-grade environmental decision support.
+        </Text>
+      </GlassCard>
+
       <TouchableOpacity
         style={styles.button}
-        onPress={() => navigation.navigate("Upload")}
+        onPress={() => navigation.navigate('Upload')}
+        activeOpacity={0.9}
       >
-        <Text style={styles.buttonText}>Continue to Upload →</Text>
+        <Text style={styles.buttonText}>
+          Continue to AI Scan Lab →
+        </Text>
       </TouchableOpacity>
-
     </ScrollView>
   );
 };
@@ -103,92 +168,109 @@ export default ProjectInfoScreen;
 const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
-    padding: 20,
-    backgroundColor: "#f4f7fb",
+    padding: spacing.lg,
+    paddingBottom: spacing.xxl + 40,
+    backgroundColor: colors.background,
   },
 
   banner: {
-    width: "100%",
-    height: 180,
-    borderRadius: 12,
-    marginBottom: 15,
+    width: '100%',
+    height: 210,
+    borderRadius: 24,
+    marginBottom: spacing.lg,
   },
 
   title: {
-    fontSize: 26,
-    fontWeight: "bold",
-    textAlign: "center",
-    color: "#2c3e50",
+    fontSize: typography.heading2 + 4,
+    fontWeight: typography.weightBold,
+    textAlign: 'center',
+    color: colors.primaryDark,
   },
 
   subtitle: {
-    textAlign: "center",
-    marginBottom: 20,
-    color: "#6c7a89",
+    textAlign: 'center',
+    marginBottom: spacing.lg,
+    color: colors.textMuted,
+    fontSize: typography.body,
+  },
+
+  heroCard: {
+    marginBottom: spacing.lg,
+    borderRadius: 28,
   },
 
   card: {
-    backgroundColor: "white",
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 15,
-    shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 3,
+    marginBottom: spacing.lg,
+    borderRadius: 28,
   },
 
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 8,
-    color: "#34495e",
+  highlightCard: {
+    marginBottom: spacing.lg,
+    borderRadius: 28,
   },
 
-  text: {
-    fontSize: 15,
-    lineHeight: 22,
-    color: "#555",
+  bodyText: {
+    fontSize: typography.body,
+    lineHeight: 24,
+    color: colors.textMuted,
+    marginTop: spacing.sm,
   },
 
   row: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+
+  iconCircle: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: 'rgba(45,90,61,0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.md,
+  },
+
+  workflowText: {
+    flex: 1,
+    fontSize: typography.body,
+    color: colors.text,
+    lineHeight: 22,
   },
 
   featureBox: {
-    backgroundColor: "#eaf5ee",
-    padding: 12,
-    borderRadius: 10,
+    marginTop: spacing.sm,
+    backgroundColor: 'rgba(45,90,61,0.05)',
+    padding: spacing.md,
+    borderRadius: 18,
   },
 
   feature: {
-    fontSize: 15,
-    marginBottom: 6,
-  },
-
-  progress: {
-    textAlign: "center",
-    color: "#7f8c8d",
-    marginTop: 10,
+    fontSize: typography.body,
+    marginBottom: spacing.sm,
+    color: colors.text,
+    lineHeight: 22,
   },
 
   button: {
-    marginTop: 20,
-    backgroundColor: "#2d5a3d",
-    padding: 16,
-    borderRadius: 10,
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOpacity: 0.2,
-    shadowRadius: 5,
-    elevation: 5,
+    marginTop: spacing.lg,
+    backgroundColor: colors.primary,
+    padding: spacing.md,
+    borderRadius: 24,
+    alignItems: 'center',
+
+    shadowColor: colors.primary,
+    shadowOpacity: 0.18,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 6,
   },
 
   buttonText: {
-    color: "white",
-    fontWeight: "bold",
-    fontSize: 16,
+    color: '#fff',
+    fontWeight: typography.weightBold,
+    fontSize: typography.body,
+    letterSpacing: 0.4,
   },
 });

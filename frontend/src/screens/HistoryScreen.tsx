@@ -1,25 +1,35 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+﻿import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
-import { CompositeNavigationProp, useFocusEffect } from '@react-navigation/native';
+import {
+  CompositeNavigationProp,
+  useFocusEffect,
+} from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import axios from 'axios';
 import { useCallback, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    FlatList,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { ClassificationResult, RootStackParamList } from 'src/types/type';
+import { FlashList } from '@shopify/flash-list';
+import Animated, { FadeInUp } from 'react-native-reanimated';
+
+import GlassCard from '../components/GlassCard';
+import SectionHeader from '../components/SectionHeader';
+import { colors, spacing, typography } from '../theme';
+import {
+  ClassificationResult,
+  RootStackParamList,
+} from '../types/type';
 
 type HistoryScreenNavigationProp = CompositeNavigationProp<
   BottomTabNavigationProp<RootStackParamList, 'History'>,
   NativeStackNavigationProp<RootStackParamList>
 >;
-
 
 type Props = {
   navigation: HistoryScreenNavigationProp;
@@ -47,23 +57,29 @@ export default function HistoryScreen({ navigation }: Props) {
   const loadHistory = async () => {
     try {
       setLoading(true);
+
       const token = await AsyncStorage.getItem('userToken');
+
       if (!token) {
         Alert.alert('Error', 'Authentication token not found');
         return;
       }
 
-      const response = await axios.get(`${API_URL}/classification/history`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const response = await axios.get(
+        `${API_URL}/classification/history`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
-     setRecords(response.data.records);
-
+      setRecords(response.data.records || []);
     } catch (error: any) {
       const errorMessage =
-        error.response?.data?.message || 'Failed to load history. Please try again.';
+        error.response?.data?.message ||
+        'Failed to load history. Please try again.';
+
       Alert.alert('Error', errorMessage);
     } finally {
       setLoading(false);
@@ -72,6 +88,7 @@ export default function HistoryScreen({ navigation }: Props) {
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
+
     return date.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
@@ -81,7 +98,13 @@ export default function HistoryScreen({ navigation }: Props) {
     });
   };
 
-  const renderHistoryItem = ({ item }: { item: HistoryRecord }) => {
+  const renderItem = ({
+    item,
+    index,
+  }: {
+    item: HistoryRecord;
+    index: number;
+  }) => {
     const result: ClassificationResult = {
       verdict: item.predictedClass,
       waterQualityIndex: item.confidence,
@@ -92,243 +115,314 @@ export default function HistoryScreen({ navigation }: Props) {
       timestamp: item.createdAt,
       className: item.predictedClass,
       confidence: item.confidence,
-      scientificDescription: 'Loading...',
-      environmentalSignificance: 'Loading...',
-      impacts: 'Loading...',
+      scientificDescription: 'N/A',
+      environmentalSignificance: 'N/A',
+      impacts: 'N/A',
     };
 
+    const verdictColor =
+      item.predictedClass === 'SAFE'
+        ? colors.success
+        : item.predictedClass === 'CAUTION'
+        ? colors.caution
+        : colors.danger;
+
     return (
-      <TouchableOpacity
-        style={styles.historyItem}
-        onPress={() =>
-          navigation.navigate('Result', {
-            result,
-          })
-        }
-        activeOpacity={0.7}
-      >
-        <View style={styles.itemContent}>
-          <Text style={styles.itemClass}>{item.predictedClass}</Text>
-          <Text style={styles.itemDate}>{formatDate(item.createdAt)}</Text>
-        </View>
-        <View style={styles.itemConfidence}>
-          <Text style={styles.confidenceValue}>{Math.round(item.confidence * 100)}%</Text>
-        </View>
-      </TouchableOpacity>
+      <Animated.View entering={FadeInUp.delay(index * 80).duration(450)}>
+        <TouchableOpacity
+          style={styles.historyCard}
+          onPress={() => navigation.navigate('Result', { result })}
+          activeOpacity={0.9}
+        >
+          <View style={styles.cardHeader}>
+            <View style={styles.thumbnail}>
+              <Text style={styles.thumbText}>AI</Text>
+            </View>
+
+            <View style={styles.cardTitleBlock}>
+              <Text style={styles.cardTitle}>
+                {item.predictedClass}
+              </Text>
+              <Text style={styles.cardSubtitle}>
+                {formatDate(item.createdAt)}
+              </Text>
+            </View>
+
+            <View
+              style={[
+                styles.verdictBadge,
+                { backgroundColor: `${verdictColor}18` },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.verdictText,
+                  { color: verdictColor },
+                ]}
+              >
+                {item.predictedClass}
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.cardMetrics}>
+            <GlassCard style={styles.metricPill}>
+              <Text style={styles.metricLabel}>WQI</Text>
+              <Text style={styles.metricValue}>
+                {Math.round(item.confidence)}
+              </Text>
+            </GlassCard>
+
+            <GlassCard style={styles.metricPill}>
+              <Text style={styles.metricLabel}>Confidence</Text>
+              <Text style={styles.metricValue}>
+                {Math.round((item.confidence / 10) * 100)}%
+              </Text>
+            </GlassCard>
+          </View>
+        </TouchableOpacity>
+      </Animated.View>
     );
   };
 
   const renderEmptyState = () => (
-    <View style={styles.emptyContainer}>
-      <Text style={styles.emptyIcon}>📋</Text>
-      <Text style={styles.emptyTitle}>No Classifications Yet</Text>
+    <GlassCard style={styles.emptyContainer}>
+      <Text style={styles.emptyIcon}>📊</Text>
+      <SectionHeader title="No Classifications Yet" />
       <Text style={styles.emptyText}>
-        Start by uploading a microscopic image to see your classification history here.
+        Upload a sample to unlock your executive environmental
+        analytics archive.
       </Text>
+
       <TouchableOpacity
         style={styles.emptyButton}
         onPress={() => navigation.navigate('Upload')}
       >
-        <Text style={styles.emptyButtonText}>Back to Upload</Text>
+        <Text style={styles.emptyButtonText}>
+          Continue to Upload
+        </Text>
       </TouchableOpacity>
-    </View>
+    </GlassCard>
   );
 
   if (loading) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#2d5a3d" />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
+
   return (
-  <View style={styles.container}>
-    <View style={styles.banner}>
+    <View style={styles.container}>
+      <GlassCard style={styles.banner}>
+        <SectionHeader
+          title="Classification History"
+          subtitle="Executive scan intelligence archive"
+        />
+      </GlassCard>
 
-  {/* Profile text inside banner */}
-  <Text style={styles.bannerTitle}>Classification History</Text>
-  <Text style={styles.bannersubtitle}>Your previous classifications</Text>
-</View>
-   
-    {records.length > 0 ? (
-      <FlatList
-        data={records}
-        renderItem={renderHistoryItem}
-        keyExtractor={(item) => item._id}
-        contentContainerStyle={styles.listContent}
-        scrollEnabled={true}
-      />
-    ) : (
-      renderEmptyState()
-    )}
+      {records.length > 0 ? (
+        <FlashList
+          data={records}
+          renderItem={renderItem}
+          keyExtractor={(item) => item._id}
+          estimatedItemSize={180}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+        />
+      ) : (
+        renderEmptyState()
+      )}
 
-    {/* Always show Back to Upload button */}
-    <View style={styles.footer}>
-      <TouchableOpacity
-        style={styles.refreshButton}
-        onPress={loadHistory}
-      >
-        <Text style={styles.refreshButtonText}>Refresh</Text>
-      </TouchableOpacity>
+      <View style={styles.footer}>
+        <TouchableOpacity
+          style={styles.footerButton}
+          onPress={loadHistory}
+        >
+          <Text style={styles.footerButtonText}>Refresh</Text>
+        </TouchableOpacity>
 
-      <TouchableOpacity
-        style={[styles.refreshButton, { marginTop: 10, backgroundColor: '#2d5a3d' }]}
-        onPress={() => navigation.navigate('Upload')}
-      >
-        <Text style={styles.refreshButtonText}>Back to Upload</Text>
-      </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.footerButton, styles.uploadButton]}
+          onPress={() => navigation.navigate('Upload')}
+        >
+          <Text
+            style={[
+              styles.footerButtonText,
+              styles.uploadButtonText,
+            ]}
+          >
+            Upload Sample
+          </Text>
+        </TouchableOpacity>
+      </View>
     </View>
-  </View>
-);
-
-
-  
+  );
 }
-
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: colors.background,
   },
+
   centerContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f8f9fa',
   },
-  header: {
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+
+  banner: {
+    margin: spacing.md,
+    marginBottom: spacing.sm,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#1a1a1a',
-    marginBottom: 4,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#666',
-  },
+
   listContent: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.xxl,
   },
-  historyItem: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+
+  historyCard: {
+    backgroundColor: colors.surfaceGlass,
+    borderRadius: 30,
+    padding: spacing.lg,
+    marginBottom: spacing.md,
+
+    shadowColor: '#103f26',
+    shadowOffset: { width: 0, height: 14 },
+    shadowOpacity: 0.08,
+    shadowRadius: 22,
+    elevation: 7,
+  },
+
+  cardHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    borderLeftWidth: 4,
-    borderLeftColor: '#2d5a3d',
+    marginBottom: spacing.md,
   },
-  itemContent: {
-    flex: 1,
-  },
-  itemClass: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1a1a1a',
-    marginBottom: 4,
-  },
-  itemDate: {
-    fontSize: 12,
-    color: '#999',
-  },
-  itemConfidence: {
-    backgroundColor: '#e8f0eb',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-  },
-  confidenceValue: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#2d5a3d',
-  },
-  emptyContainer: {
-    flex: 1,
+
+  thumbnail: {
+    width: 54,
+    height: 54,
+    borderRadius: 20,
+    backgroundColor: colors.accent,
+    marginRight: spacing.md,
+    alignItems: 'center',
     justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 20,
   },
+
+  thumbText: {
+    color: '#fff',
+    fontWeight: typography.weightBold,
+  },
+
+  cardTitleBlock: {
+    flex: 1,
+  },
+
+  cardTitle: {
+    color: colors.primaryDark,
+    fontSize: typography.heading4,
+    fontWeight: typography.weightBold,
+  },
+
+  cardSubtitle: {
+    marginTop: 6,
+    color: colors.textMuted,
+    fontSize: typography.small,
+  },
+
+  verdictBadge: {
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    borderRadius: 999,
+  },
+
+  verdictText: {
+    fontWeight: typography.weightBold,
+    fontSize: typography.small,
+  },
+
+  cardMetrics: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+
+  metricPill: {
+    flex: 1,
+    borderRadius: 22,
+    padding: spacing.sm,
+  },
+
+  metricLabel: {
+    color: colors.textMuted,
+    fontSize: typography.micro,
+    marginBottom: spacing.xs,
+  },
+
+  metricValue: {
+    color: colors.primaryDark,
+    fontSize: typography.heading4,
+    fontWeight: typography.weightBold,
+  },
+
+  emptyContainer: {
+    margin: spacing.lg,
+    alignItems: 'center',
+    paddingVertical: spacing.xxl,
+  },
+
   emptyIcon: {
     fontSize: 48,
-    marginBottom: 16,
+    marginBottom: spacing.md,
   },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1a1a1a',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
+
   emptyText: {
-    fontSize: 14,
-    color: '#666',
+    color: colors.textMuted,
+    fontSize: typography.body,
     textAlign: 'center',
-    marginBottom: 20,
-    lineHeight: 20,
+    marginBottom: spacing.lg,
+    lineHeight: 24,
   },
+
   emptyButton: {
-    backgroundColor: '#2d5a3d',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-    width: '60%',
-    alignSelf: 'center',
+    backgroundColor: colors.primary,
+    borderRadius: 24,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xxl,
   },
+
   emptyButtonText: {
     color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
-    textAlign: 'center',
+    fontSize: typography.body,
+    fontWeight: typography.weightBold,
   },
+
   footer: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
-    backgroundColor: '#fff',
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.xl,
   },
-  refreshButton: {
-    backgroundColor: '#2d5a3d',
-    paddingVertical: 12,
-    borderRadius: 8,
-    width: '60%',
-    alignSelf: 'center',
+
+  footerButton: {
+    backgroundColor: colors.surfaceGlass,
+    borderRadius: 24,
+    paddingVertical: spacing.md,
+    alignItems: 'center',
+    marginBottom: spacing.sm,
   },
-  refreshButtonText: {
+
+  footerButtonText: {
+    color: colors.primaryDark,
+    fontSize: typography.body,
+    fontWeight: typography.weightBold,
+  },
+
+  uploadButton: {
+    backgroundColor: colors.primary,
+  },
+
+  uploadButtonText: {
     color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
-    
-    textAlign: 'center',
-
   },
-  banner: {
-  paddingTop: 60,
-  paddingBottom: 40,
-  alignItems: 'center',
-  backgroundColor: '#2d5a3d',   // ✅ green banner
-  position: 'relative',
-},
-bannerTitle: {
-  fontSize: 28,
-  fontWeight: 'bold',
-  color: '#fff',                // ✅ white text over green
-},
-
-bannersubtitle: {
-  fontSize: 14,
-  color: '#d0d0d0',
-  marginTop: 8,
-},
 });

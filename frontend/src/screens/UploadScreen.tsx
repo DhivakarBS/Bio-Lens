@@ -1,9 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as ImagePicker from 'expo-image-picker';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
+  Dimensions,
   Image,
   ScrollView,
   StyleSheet,
@@ -11,9 +12,24 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withTiming,
+  Easing,
+  FadeInUp,
+  FadeInDown,
+} from 'react-native-reanimated';
 
-import api from 'src/services/api';
-import { RootStackParamList } from 'src/types/type';
+import api from '../services/api';
+import { RootStackParamList } from '../types/type';
+import AnimatedScanButton from '../components/AnimatedScanButton';
+import GlassCard from '../components/GlassCard';
+import SectionHeader from '../components/SectionHeader';
+import { colors, spacing, typography } from '../theme';
+
+const windowWidth = Dimensions.get('window').width;
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Upload'>;
 
@@ -24,7 +40,9 @@ export default function UploadScreen({ navigation }: Props) {
 
   useEffect(() => {
     (async () => {
-      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      const { status } =
+        await ImagePicker.requestCameraPermissionsAsync();
+
       if (status !== 'granted') {
         Alert.alert(
           'Permission Required',
@@ -34,10 +52,43 @@ export default function UploadScreen({ navigation }: Props) {
     })();
   }, []);
 
+  const scanAnimation = useSharedValue(0);
+  const glowAnimation = useSharedValue(0);
+
+  useEffect(() => {
+    scanAnimation.value = withRepeat(
+      withTiming(1, {
+        duration: 2200,
+        easing: Easing.inOut(Easing.quad),
+      }),
+      -1,
+      false
+    );
+
+    glowAnimation.value = withRepeat(
+      withTiming(1, {
+        duration: 1800,
+        easing: Easing.inOut(Easing.ease),
+      }),
+      -1,
+      true
+    );
+  }, []);
+
+  const scanningLineStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: scanAnimation.value * 280 }],
+    opacity: image ? 1 : 0,
+  }));
+
+  const glowStyle = useAnimatedStyle(() => ({
+    shadowRadius: image ? 28 : 0,
+    shadowOpacity: image ? 0.2 : 0,
+    opacity: image ? 1 : 0,
+  }));
+
   const pickImage = async (source: 'camera' | 'gallery') => {
     try {
       setLoading(true);
-
       let result;
 
       if (source === 'camera') {
@@ -69,7 +120,9 @@ export default function UploadScreen({ navigation }: Props) {
     }
   };
 
-  const convertImageToBase64 = async (uri: string): Promise<string> => {
+  const convertImageToBase64 = async (
+    uri: string
+  ): Promise<string> => {
     const response = await fetch(uri);
     const blob = await response.blob();
 
@@ -95,20 +148,12 @@ export default function UploadScreen({ navigation }: Props) {
     try {
       setClassifying(true);
 
-      console.log(
-        'UploadScreen: sending classify request, image size:',
-        image.length
-      );
-
       const response = await api.classifyImage(image);
-
-      console.log('FULL BACKEND RESPONSE:', response);
 
       if (response?.success) {
         navigation.navigate('Result', {
           result: response.classification,
         });
-
         setImage(null);
         return;
       }
@@ -118,9 +163,6 @@ export default function UploadScreen({ navigation }: Props) {
         response?.message || 'Could not classify image'
       );
     } catch (error: any) {
-      console.error('FULL BACKEND ERROR:', error?.response?.data);
-      console.error('UploadScreen.handleClassify error:', error);
-
       const errorMessage =
         error?.response?.data?.message ||
         error?.message ||
@@ -132,205 +174,211 @@ export default function UploadScreen({ navigation }: Props) {
     }
   };
 
+  const previewUri = image
+    ? `data:image/jpeg;base64,${image}`
+    : undefined;
+
   return (
-    <View style={styles.container1}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Ionicons name="arrow-back" size={28} color="#2d5a3d" />
-        </TouchableOpacity>
-
-        <Text style={styles.title}>BioLens</Text>
-        <Text style={styles.subtitle}>Upload & Classification</Text>
-
-        <TouchableOpacity
-          style={styles.profileButton}
-          onPress={() => navigation.navigate('Profile')}
-        >
-          <Ionicons name="person-circle-outline" size={35} color="#fff" />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.historyButton}
-          onPress={() => navigation.navigate('History')}
-        >
-          <Ionicons name="time-outline" size={32} color="#fff" />
-        </TouchableOpacity>
-      </View>
+    <View style={styles.screen}>
+      <Animated.View
+        entering={FadeInDown.duration(600)}
+        style={styles.header}
+      >
+        <Text style={styles.pageTitle}>BioLens AI Scan Lab</Text>
+        <Text style={styles.pageSubtitle}>
+          Premium microscopic intelligence workflow
+        </Text>
+      </Animated.View>
 
       <ScrollView
-        contentContainerStyle={styles.container}
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.topImageWrapper}>
-          <Image
-            source={require('../../assets/output.jpeg')}
-            style={styles.image}
-          />
-        </View>
-
-        <Text style={styles.uploadTitle}>Upload your image</Text>
-
-        <TouchableOpacity
-          style={styles.uploadBtn}
-          onPress={() => pickImage('gallery')}
-          disabled={loading || classifying}
-        >
-          <Text style={styles.uploadText}>
-            {loading ? 'Loading...' : 'Click to upload'}
-          </Text>
-        </TouchableOpacity>
-
-        {image && (
-          <View style={styles.previewContainer}>
-            <TouchableOpacity
-              style={styles.cancelBtn}
-              onPress={() => setImage(null)}
-            >
-              <Text style={styles.cancelText}>✕</Text>
-            </TouchableOpacity>
-
-            <Image
-              source={{ uri: `data:image/jpeg;base64,${image}` }}
-              style={styles.preview}
+        <Animated.View entering={FadeInUp.duration(550)}>
+          <GlassCard style={styles.dropZone}>
+            <SectionHeader
+              title="Upload Sample"
+              subtitle="Select a microscopic image for enterprise-grade ecological diagnostics"
             />
-          </View>
-        )}
 
-        <TouchableOpacity
-          style={styles.predictCircle}
-          onPress={handleClassify}
-          disabled={classifying || !image}
-        >
-          <Text style={styles.predictText}>
-            {classifying ? 'Processing...' : `Start\nPredicting`}
+            <TouchableOpacity
+              style={styles.uploadZone}
+              activeOpacity={0.9}
+              onPress={() => pickImage('gallery')}
+              disabled={loading || classifying}
+            >
+              <View style={styles.dashedBorder}>
+                <Ionicons
+                  name="scan-circle-outline"
+                  size={56}
+                  color={colors.primary}
+                />
+                <Text style={styles.uploadHint}>
+                  Tap to browse microscopy images
+                </Text>
+                <Text style={styles.uploadSubHint}>
+                  AI-ready drag & drop style zone
+                </Text>
+              </View>
+            </TouchableOpacity>
+          </GlassCard>
+        </Animated.View>
+
+        {previewUri ? (
+          <Animated.View entering={FadeInUp.delay(120).duration(550)}>
+            <GlassCard style={styles.previewCard}>
+              <SectionHeader
+                title="Live Preview"
+                subtitle="AI scan visualization"
+              />
+
+              <Image
+                source={{ uri: previewUri }}
+                style={styles.previewImage}
+              />
+
+              <Animated.View
+                style={[styles.scanAccent, glowStyle]}
+              />
+              <Animated.View
+                style={[styles.scanLine, scanningLineStyle]}
+              />
+            </GlassCard>
+          </Animated.View>
+        ) : null}
+
+        <GlassCard style={styles.statusBlock}>
+          <SectionHeader
+            title="AI Diagnostic Pipeline"
+            subtitle="Real-time predictive ecological inference"
+          />
+
+          <Text style={styles.statusDetail}>
+            {classifying
+              ? 'BioLens is analyzing diatom morphology, ecological tolerance signatures, and pollution-sensitive taxa.'
+              : 'Ready for premium AI-based ecological classification.'}
           </Text>
-        </TouchableOpacity>
+        </GlassCard>
+
+        <AnimatedScanButton
+          onPress={handleClassify}
+          label="Start BioLens Scan"
+          loading={classifying}
+          disabled={loading || !image}
+        />
       </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container1: {
+  screen: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
   },
-  container: {
-    alignItems: 'center',
-    paddingTop: 40,
-    paddingBottom: 40,
-    width: '100%',
-    maxWidth: 700,
-    alignSelf: 'center',
-  },
+
   header: {
-    paddingTop: 60,
-    paddingBottom: 40,
-    alignItems: 'center',
-    backgroundColor: '#2d5a3d',
-    position: 'relative',
+    paddingTop: spacing.xl,
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.md,
   },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#fff',
+
+  pageTitle: {
+    color: colors.primaryDark,
+    fontSize: typography.heading2 + 2,
+    fontWeight: typography.weightBold,
+    letterSpacing: 0.3,
   },
-  subtitle: {
-    fontSize: 14,
-    color: '#d0d0d0',
-    marginTop: 8,
+
+  pageSubtitle: {
+    marginTop: spacing.xs,
+    color: colors.textMuted,
+    fontSize: typography.body,
   },
-  uploadTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    marginBottom: 20,
+
+  scrollContent: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.xxl + 50,
   },
-  backButton: {
-    position: 'absolute',
-    top: 40,
-    left: 20,
-    backgroundColor: '#fff',
-    borderRadius: 50,
-    padding: 2,
+
+  dropZone: {
+    marginBottom: spacing.lg,
+    borderRadius: 30,
+    padding: spacing.lg,
   },
-  profileButton: {
-    position: 'absolute',
-    top: 20,
-    right: 20,
+
+  uploadZone: {
+    marginTop: spacing.md,
   },
-  historyButton: {
-    position: 'absolute',
-    top: 20,
-    right: 70,
-  },
-  uploadBtn: {
-    backgroundColor: '#0b6e3b',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 8,
-    marginBottom: 20,
-    width: '80%',
-    alignItems: 'center',
-  },
-  uploadText: {
-    color: '#fff',
-    fontWeight: '600',
-  },
-  previewContainer: {
-    position: 'relative',
-    marginBottom: 20,
-  },
-  preview: {
-    width: 200,
-    height: 200,
-    borderRadius: 12,
-  },
-  cancelBtn: {
-    position: 'absolute',
-    top: -8,
-    right: -8,
-    backgroundColor: '#000',
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 10,
-  },
-  cancelText: {
-    color: '#fff',
-    fontWeight: '700',
-  },
-  predictCircle: {
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    backgroundColor: '#0b6e3b',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 12,
-    borderColor: '#8fe0b0',
-  },
-  predictText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
-    textAlign: 'center',
-  },
-  topImageWrapper: {
-    width: 240,
+
+  dashedBorder: {
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    borderColor: colors.primary,
+    borderRadius: 26,
     height: 240,
-    borderRadius: 40,
-    overflow: 'hidden',
-    marginBottom: 20,
-    elevation: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.lg,
+    backgroundColor: 'rgba(255,255,255,0.56)',
   },
-  image: {
-    width: '100%',
-    height: '100%',
+
+  uploadHint: {
+    marginTop: spacing.md,
+    color: colors.primary,
+    textAlign: 'center',
+    fontSize: typography.body,
+    fontWeight: typography.weightSemiBold,
+  },
+
+  uploadSubHint: {
+    marginTop: spacing.xs,
+    color: colors.textMuted,
+    fontSize: typography.small,
+  },
+
+  previewCard: {
+    marginBottom: spacing.lg,
+    borderRadius: 30,
+    padding: spacing.sm,
+  },
+
+  previewImage: {
+    width: windowWidth - spacing.lg * 2 - spacing.sm * 2,
+    height: 280,
+    borderRadius: 26,
     resizeMode: 'cover',
+    backgroundColor: colors.surface,
+  },
+
+  scanAccent: {
+    position: 'absolute',
+    top: 18,
+    left: 18,
+    right: 18,
+    bottom: 18,
+    borderRadius: 24,
+    borderWidth: 1.2,
+    borderColor: colors.accentDeep,
+  },
+
+  scanLine: {
+    position: 'absolute',
+    left: 18,
+    right: 18,
+    height: 4,
+    borderRadius: 999,
+    backgroundColor: colors.accent,
+  },
+
+  statusBlock: {
+    marginBottom: spacing.lg,
+  },
+
+  statusDetail: {
+    color: colors.textMuted,
+    fontSize: typography.body,
+    lineHeight: 24,
+    marginTop: spacing.sm,
   },
 });

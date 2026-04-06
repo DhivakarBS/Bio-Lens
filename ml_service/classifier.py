@@ -133,7 +133,7 @@ class DiatomClassifier:
             species: round(sum(scores) / len(scores), 4)
             for species, scores in confidence_accum.items()
         }
-
+        
         # compute WQI via weighted tolerance values
         total_score = 0.0
         for species, count in class_counts.items():

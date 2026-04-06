@@ -1,7 +1,9 @@
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
-import { CompositeNavigationProp } from '@react-navigation/native';
+import {
+  CompositeNavigationProp,
+  useFocusEffect,
+} from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useState } from 'react';
 import {
   StyleSheet,
@@ -12,19 +14,20 @@ import {
   ActivityIndicator,
   Alert,
   TextInput,
-  FlatList,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
+import Animated, { FadeInUp } from 'react-native-reanimated';
 
-import { RootStackParamList } from 'src/types/type';  // ✅ use your existing definition
+import GlassCard from '../components/GlassCard';
+import SectionHeader from '../components/SectionHeader';
+import { colors, spacing, typography } from '../theme';
+import { RootStackParamList } from '../types/type';
 
-// 👇 Composite navigation type for AdminPanel
 type AdminPanelNavigationProp = CompositeNavigationProp<
   BottomTabNavigationProp<RootStackParamList, 'AdminDashboard'>,
   NativeStackNavigationProp<RootStackParamList>
 >;
-
 
 type Props = {
   navigation: AdminPanelNavigationProp;
@@ -48,18 +51,19 @@ interface DiatomClass {
 const API_URL = 'http://localhost:5000/api';
 
 export default function AdminPanel({ navigation }: Props) {
-  const [activeTab, setActiveTab] = useState<'stats' | 'classes' | 'logs'>('stats');
+  const [activeTab, setActiveTab] =
+    useState<'stats' | 'classes'>('stats');
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [classes, setClasses] = useState<DiatomClass[]>([]);
   const [loading, setLoading] = useState(false);
-  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
-  const [adminToken, setAdminToken] = useState<string | null>(null);
-  const [adminUsername, setAdminUsername] = useState('');
-  const [adminPassword, setAdminPassword] = useState('');
   const [showLoginForm, setShowLoginForm] = useState(true);
 
-  // New diatom class form
-  const [showNewClassForm, setShowNewClassForm] = useState(false);
+  const [adminUsername, setAdminUsername] = useState('');
+  const [adminPassword, setAdminPassword] = useState('');
+
+  const [showNewClassForm, setShowNewClassForm] =
+    useState(false);
+
   const [newClass, setNewClass] = useState({
     name: '',
     scientificDescription: '',
@@ -75,9 +79,8 @@ export default function AdminPanel({ navigation }: Props) {
 
   const checkAdminAuth = async () => {
     const token = await AsyncStorage.getItem('adminToken');
+
     if (token) {
-      setAdminToken(token);
-      setIsAdminAuthenticated(true);
       setShowLoginForm(false);
       loadStats();
     }
@@ -90,6 +93,7 @@ export default function AdminPanel({ navigation }: Props) {
     }
 
     setLoading(true);
+
     try {
       const response = await axios.post(`${API_URL}/admin/login`, {
         username: adminUsername,
@@ -97,16 +101,21 @@ export default function AdminPanel({ navigation }: Props) {
       });
 
       if (response.data.token) {
-        await AsyncStorage.setItem('adminToken', response.data.token);
-        setAdminToken(response.data.token);
-        setIsAdminAuthenticated(true);
+        await AsyncStorage.setItem(
+          'adminToken',
+          response.data.token
+        );
+
         setShowLoginForm(false);
         setAdminUsername('');
         setAdminPassword('');
         loadStats();
       }
     } catch (error: any) {
-      Alert.alert('Login Failed', error.response?.data?.message || 'Invalid credentials');
+      Alert.alert(
+        'Login Failed',
+        error.response?.data?.message || 'Invalid credentials'
+      );
     } finally {
       setLoading(false);
     }
@@ -115,6 +124,7 @@ export default function AdminPanel({ navigation }: Props) {
   const loadStats = async () => {
     try {
       setLoading(true);
+
       const token = await AsyncStorage.getItem('adminToken');
       if (!token) return;
 
@@ -123,7 +133,7 @@ export default function AdminPanel({ navigation }: Props) {
       });
 
       setStats(response.data);
-    } catch (error: any) {
+    } catch {
       Alert.alert('Error', 'Failed to load statistics');
     } finally {
       setLoading(false);
@@ -133,15 +143,19 @@ export default function AdminPanel({ navigation }: Props) {
   const loadClasses = async () => {
     try {
       setLoading(true);
+
       const token = await AsyncStorage.getItem('adminToken');
       if (!token) return;
 
-      const response = await axios.get(`${API_URL}/admin/diatom-classes`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await axios.get(
+        `${API_URL}/admin/diatom-classes`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
 
       setClasses(response.data);
-    } catch (error: any) {
+    } catch {
       Alert.alert('Error', 'Failed to load diatom classes');
     } finally {
       setLoading(false);
@@ -150,142 +164,172 @@ export default function AdminPanel({ navigation }: Props) {
 
   const handleAddClass = async () => {
     if (!newClass.name || !newClass.scientificDescription) {
-      Alert.alert('Error', 'Please fill in all required fields');
+      Alert.alert('Error', 'Please fill in required fields');
       return;
     }
 
     try {
       setLoading(true);
+
       const token = await AsyncStorage.getItem('adminToken');
       if (!token) return;
 
-      await axios.post(`${API_URL}/admin/diatom-classes`, newClass, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await axios.post(
+        `${API_URL}/admin/diatom-classes`,
+        newClass,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
 
       Alert.alert('Success', 'Diatom class added successfully');
+
       setNewClass({
         name: '',
         scientificDescription: '',
         environmentalSignificance: '',
         impacts: '',
       });
+
       setShowNewClassForm(false);
       loadClasses();
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.message || 'Failed to add class');
+      Alert.alert(
+        'Error',
+        error.response?.data?.message ||
+          'Failed to add class'
+      );
     } finally {
       setLoading(false);
     }
   };
 
   const handleDeleteClass = async (classId: string) => {
-    Alert.alert('Delete Class', 'Are you sure you want to delete this diatom class?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            const token = await AsyncStorage.getItem('adminToken');
-            if (!token) return;
+    Alert.alert(
+      'Delete Class',
+      'Are you sure you want to delete this diatom class?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const token = await AsyncStorage.getItem(
+                'adminToken'
+              );
+              if (!token) return;
 
-            await axios.delete(`${API_URL}/admin/diatom-classes/${classId}`, {
-              headers: { Authorization: `Bearer ${token}` },
-            });
+              await axios.delete(
+                `${API_URL}/admin/diatom-classes/${classId}`,
+                {
+                  headers: {
+                    Authorization: `Bearer ${token}`,
+                  },
+                }
+              );
 
-            Alert.alert('Success', 'Diatom class deleted');
-            loadClasses();
-          } catch (error: any) {
-            Alert.alert('Error', 'Failed to delete class');
-          }
+              loadClasses();
+            } catch {
+              Alert.alert('Error', 'Failed to delete class');
+            }
+          },
         },
-      },
-    ]);
+      ]
+    );
   };
 
   const handleLogout = async () => {
     await AsyncStorage.removeItem('adminToken');
-    setIsAdminAuthenticated(false);
     setShowLoginForm(true);
-    setAdminToken(null);
   };
 
   if (showLoginForm) {
     return (
       <View style={styles.container}>
-        <View style={styles.loginContainer}>
-          <Text style={styles.loginTitle}>Admin Login</Text>
+        <GlassCard style={styles.loginContainer}>
+          <SectionHeader
+            title="Admin Login"
+            subtitle="Secure BioLens control center"
+          />
+
           <TextInput
             style={styles.input}
             placeholder="Username"
             value={adminUsername}
             onChangeText={setAdminUsername}
-            editable={!loading}
           />
+
           <TextInput
             style={styles.input}
             placeholder="Password"
             value={adminPassword}
             onChangeText={setAdminPassword}
             secureTextEntry
-            editable={!loading}
           />
+
           <TouchableOpacity
-            style={[styles.button, loading && styles.buttonDisabled]}
+            style={styles.button}
             onPress={handleAdminLogin}
-            disabled={loading}
           >
             {loading ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.buttonText}>Login</Text>
+              <Text style={styles.buttonText}>Access Dashboard</Text>
             )}
           </TouchableOpacity>
-        </View>
+        </GlassCard>
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Admin Dashboard</Text>
-        <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
+      <GlassCard style={styles.header}>
+        <SectionHeader
+          title="Admin Dashboard"
+          subtitle="Enterprise BioLens control center"
+        />
+
+        <TouchableOpacity
+          style={styles.logoutBtn}
+          onPress={handleLogout}
+        >
           <Text style={styles.logoutBtnText}>Logout</Text>
         </TouchableOpacity>
-      </View>
+      </GlassCard>
 
-      {/* Tab Navigation */}
       <View style={styles.tabContainer}>
         <TouchableOpacity
-          style={[styles.tab, activeTab === 'stats' && styles.activeTab]}
+          style={[
+            styles.tab,
+            activeTab === 'stats' && styles.activeTab,
+          ]}
           onPress={() => {
             setActiveTab('stats');
             loadStats();
           }}
         >
-          <Text style={[styles.tabText, activeTab === 'stats' && styles.activeTabText]}>
-            Statistics
-          </Text>
+          <Text style={styles.activeTabText}>Statistics</Text>
         </TouchableOpacity>
+
         <TouchableOpacity
-          style={[styles.tab, activeTab === 'classes' && styles.activeTab]}
+          style={[
+            styles.tab,
+            activeTab === 'classes' && styles.activeTab,
+          ]}
           onPress={() => {
             setActiveTab('classes');
             loadClasses();
           }}
         >
-          <Text style={[styles.tabText, activeTab === 'classes' && styles.activeTabText]}>
-            Diatom Classes
-          </Text>
+          <Text style={styles.activeTabText}>Diatom Classes</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Content */}
-      <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
-        {loading && activeTab !== 'stats' ? (
-          <ActivityIndicator size="large" color="#2d5a3d" />
+      <ScrollView contentContainerStyle={styles.contentContainer}>
+        {loading ? (
+          <ActivityIndicator size="large" color={colors.primary} />
         ) : activeTab === 'stats' ? (
           <StatsView stats={stats} />
         ) : (
@@ -297,42 +341,33 @@ export default function AdminPanel({ navigation }: Props) {
         )}
       </ScrollView>
 
-      {/* New Class Form Modal */}
       {showNewClassForm && (
         <View style={styles.formOverlay}>
-          <View style={styles.formContainer}>
-            <Text style={styles.formTitle}>Add New Diatom Class</Text>
+          <GlassCard style={styles.formContainer}>
+            <SectionHeader title="Add New Diatom Class" />
+
             <TextInput
               style={styles.input}
               placeholder="Class Name"
               value={newClass.name}
-              onChangeText={(text) => setNewClass({ ...newClass, name: text })}
+              onChangeText={(text) =>
+                setNewClass({ ...newClass, name: text })
+              }
             />
+
             <TextInput
               style={[styles.input, styles.textArea]}
               placeholder="Scientific Description"
               value={newClass.scientificDescription}
               onChangeText={(text) =>
-                setNewClass({ ...newClass, scientificDescription: text })
+                setNewClass({
+                  ...newClass,
+                  scientificDescription: text,
+                })
               }
               multiline
             />
-            <TextInput
-              style={[styles.input, styles.textArea]}
-              placeholder="Environmental Significance"
-              value={newClass.environmentalSignificance}
-              onChangeText={(text) =>
-                setNewClass({ ...newClass, environmentalSignificance: text })
-              }
-              multiline
-            />
-            <TextInput
-              style={[styles.input, styles.textArea]}
-              placeholder="Impacts & Indicators"
-              value={newClass.impacts}
-              onChangeText={(text) => setNewClass({ ...newClass, impacts: text })}
-              multiline
-            />
+
             <View style={styles.formButtons}>
               <TouchableOpacity
                 style={[styles.button, styles.cancelButton]}
@@ -340,19 +375,15 @@ export default function AdminPanel({ navigation }: Props) {
               >
                 <Text style={styles.cancelButtonText}>Cancel</Text>
               </TouchableOpacity>
+
               <TouchableOpacity
-                style={[styles.button, loading && styles.buttonDisabled]}
+                style={styles.button}
                 onPress={handleAddClass}
-                disabled={loading}
               >
-                {loading ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <Text style={styles.buttonText}>Add Class</Text>
-                )}
+                <Text style={styles.buttonText}>Add</Text>
               </TouchableOpacity>
             </View>
-          </View>
+          </GlassCard>
         </View>
       )}
     </View>
@@ -365,28 +396,26 @@ function StatsView({ stats }: { stats: AdminStats | null }) {
   }
 
   return (
-    <View>
-      <View style={styles.statCard}>
+    <Animated.View entering={FadeInUp.duration(500)}>
+      <GlassCard style={styles.statCard}>
         <Text style={styles.statLabel}>Total Users</Text>
         <Text style={styles.statValue}>{stats.totalUsers}</Text>
-      </View>
-      <View style={styles.statCard}>
-        <Text style={styles.statLabel}>Total Classifications</Text>
-        <Text style={styles.statValue}>{stats.totalClassifications}</Text>
-      </View>
-      <View style={styles.statCard}>
-        <Text style={styles.statLabel}>Diatom Classes</Text>
-        <Text style={styles.statValue}>{stats.totalDiatomClasses}</Text>
-      </View>
+      </GlassCard>
 
-      <Text style={styles.sectionTitle}>Most Detected Classes</Text>
-      {stats.mostDetectedClasses.map((item, index) => (
-        <View key={index} style={styles.classItem}>
-          <Text style={styles.className}>{item._id}</Text>
-          <Text style={styles.classCount}>{item.count} detections</Text>
-        </View>
-      ))}
-    </View>
+      <GlassCard style={styles.statCard}>
+        <Text style={styles.statLabel}>Total Classifications</Text>
+        <Text style={styles.statValue}>
+          {stats.totalClassifications}
+        </Text>
+      </GlassCard>
+
+      <GlassCard style={styles.statCard}>
+        <Text style={styles.statLabel}>Diatom Classes</Text>
+        <Text style={styles.statValue}>
+          {stats.totalDiatomClasses}
+        </Text>
+      </GlassCard>
+    </Animated.View>
   );
 }
 
@@ -401,26 +430,33 @@ function ClassesView({
 }) {
   return (
     <View>
-      <TouchableOpacity style={styles.addButton} onPress={onAddNew}>
+      <TouchableOpacity
+        style={styles.addButton}
+        onPress={onAddNew}
+      >
         <Text style={styles.addButtonText}>+ Add New Class</Text>
       </TouchableOpacity>
 
-      {classes.length === 0 ? (
-        <Text style={styles.emptyText}>No diatom classes yet</Text>
-      ) : (
-        classes.map((diatomClass) => (
-          <View key={diatomClass._id} style={styles.classCard}>
-            <Text style={styles.classCardTitle}>{diatomClass.name}</Text>
-            <Text style={styles.classCardText}>{diatomClass.scientificDescription}</Text>
-            <TouchableOpacity
-              style={styles.deleteButton}
-              onPress={() => onDelete(diatomClass._id)}
-            >
-              <Text style={styles.deleteButtonText}>Delete</Text>
-            </TouchableOpacity>
-          </View>
-        ))
-      )}
+      {classes.map((diatomClass) => (
+        <GlassCard
+          key={diatomClass._id}
+          style={styles.classCard}
+        >
+          <Text style={styles.classCardTitle}>
+            {diatomClass.name}
+          </Text>
+          <Text style={styles.classCardText}>
+            {diatomClass.scientificDescription}
+          </Text>
+
+          <TouchableOpacity
+            style={styles.deleteButton}
+            onPress={() => onDelete(diatomClass._id)}
+          >
+            <Text style={styles.deleteButtonText}>Delete</Text>
+          </TouchableOpacity>
+        </GlassCard>
+      ))}
     </View>
   );
 }
@@ -428,233 +464,176 @@ function ClassesView({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: colors.background,
+    padding: spacing.md,
   },
+
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    marginBottom: spacing.md,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#1a1a1a',
+
+  loginContainer: {
+    marginTop: 120,
   },
-  logoutBtn: {
-    backgroundColor: '#d32f2f',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 6,
-  },
-  logoutBtnText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '600',
-  },
+
   tabContainer: {
     flexDirection: 'row',
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
   },
+
   tab: {
     flex: 1,
-    paddingVertical: 12,
+    paddingVertical: spacing.md,
+    borderRadius: 20,
+    backgroundColor: colors.surfaceGlass,
     alignItems: 'center',
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
   },
+
   activeTab: {
-    borderBottomColor: '#2d5a3d',
+    borderWidth: 1,
+    borderColor: colors.primary,
   },
-  tabText: {
-    fontSize: 14,
-    color: '#666',
-    fontWeight: '500',
-  },
+
   activeTabText: {
-    color: '#2d5a3d',
-    fontWeight: '600',
+    color: colors.primaryDark,
+    fontWeight: typography.weightBold,
   },
-  content: {
-    flex: 1,
-  },
+
   contentContainer: {
-    paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingBottom: spacing.xxl,
   },
+
   statCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    borderLeftWidth: 4,
-    borderLeftColor: '#2d5a3d',
+    marginBottom: spacing.md,
   },
+
   statLabel: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 8,
+    color: colors.textMuted,
+    marginBottom: spacing.xs,
   },
+
   statValue: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#2d5a3d',
+    color: colors.primaryDark,
+    fontSize: typography.heading2,
+    fontWeight: typography.weightBold,
   },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1a1a1a',
-    marginVertical: 16,
-  },
-  classItem: {
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 8,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  className: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#1a1a1a',
-  },
-  classCount: {
-    fontSize: 12,
-    color: '#666',
-  },
-  classCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    borderLeftWidth: 4,
-    borderLeftColor: '#2d5a3d',
-  },
-  classCardTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1a1a1a',
-    marginBottom: 8,
-  },
-  classCardText: {
-    fontSize: 13,
-    color: '#666',
-    marginBottom: 12,
-    lineHeight: 18,
-  },
-  deleteButton: {
-    backgroundColor: '#ffebee',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 6,
-    alignSelf: 'flex-start',
-  },
-  deleteButtonText: {
-    color: '#d32f2f',
-    fontSize: 12,
-    fontWeight: '600',
-  },
+
   addButton: {
-    backgroundColor: '#2d5a3d',
-    paddingVertical: 12,
-    borderRadius: 8,
+    backgroundColor: colors.primary,
+    paddingVertical: spacing.md,
+    borderRadius: 24,
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: spacing.md,
   },
+
   addButtonText: {
     color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
+    fontWeight: typography.weightBold,
   },
-  emptyText: {
-    fontSize: 14,
-    color: '#999',
-    textAlign: 'center',
-    marginVertical: 20,
+
+  classCard: {
+    marginBottom: spacing.md,
   },
-  loginContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 20,
+
+  classCardTitle: {
+    fontSize: typography.heading4,
+    fontWeight: typography.weightBold,
+    color: colors.primaryDark,
+    marginBottom: spacing.sm,
   },
-  loginTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#1a1a1a',
-    marginBottom: 20,
-    textAlign: 'center',
+
+  classCardText: {
+    color: colors.textMuted,
+    lineHeight: 22,
+    marginBottom: spacing.md,
   },
+
+  deleteButton: {
+    backgroundColor: 'rgba(255,0,0,0.08)',
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: 18,
+    alignSelf: 'flex-start',
+  },
+
+  deleteButtonText: {
+    color: colors.danger,
+    fontWeight: typography.weightBold,
+  },
+
   input: {
     borderWidth: 1,
-    borderColor: '#d0d0d0',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 12,
-    fontSize: 14,
+    borderColor: colors.border,
+    padding: spacing.md,
+    borderRadius: 18,
+    marginBottom: spacing.md,
     backgroundColor: '#fff',
   },
+
   textArea: {
-    minHeight: 80,
+    minHeight: 100,
     textAlignVertical: 'top',
   },
+
   button: {
-    backgroundColor: '#2d5a3d',
-    paddingVertical: 12,
-    borderRadius: 8,
+    backgroundColor: colors.primary,
+    paddingVertical: spacing.md,
+    borderRadius: 20,
     alignItems: 'center',
   },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
+
   buttonText: {
     color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
+    fontWeight: typography.weightBold,
   },
+
+  logoutBtn: {
+    backgroundColor: colors.danger,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: 18,
+    alignSelf: 'flex-start',
+    marginTop: spacing.sm,
+  },
+
+  logoutBtnText: {
+    color: '#fff',
+    fontWeight: typography.weightBold,
+  },
+
+  emptyText: {
+    textAlign: 'center',
+    color: colors.textMuted,
+    marginVertical: spacing.xl,
+  },
+
   formOverlay: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0,0,0,0.4)',
     justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 1000,
+    padding: spacing.lg,
   },
-  formContainer: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 20,
-    width: '90%',
-    maxHeight: '80%',
-  },
-  formTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1a1a1a',
-    marginBottom: 16,
-  },
+
+  formContainer: {},
+
   formButtons: {
     flexDirection: 'row',
-    gap: 12,
-    marginTop: 16,
+    gap: spacing.sm,
+    marginTop: spacing.md,
   },
+
   cancelButton: {
-    backgroundColor: '#e0e0e0',
     flex: 1,
+    backgroundColor: colors.surface,
   },
+
   cancelButtonText: {
-    color: '#666',
-    fontSize: 14,
-    fontWeight: '600',
+    color: colors.text,
+    fontWeight: typography.weightBold,
   },
 });

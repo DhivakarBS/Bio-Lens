@@ -2,17 +2,24 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { authService } from 'src/services';
-import { RootStackParamList } from 'src/types/type';
+import Animated, {
+  FadeInDown,
+  FadeInUp,
+} from 'react-native-reanimated';
+
+import GlassCard from '../components/GlassCard';
+import { authService } from '../services';
+import { RootStackParamList } from '../types/type';
+import { colors, spacing, typography } from '../theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Signup'>;
 
@@ -30,9 +37,11 @@ export default function SignupScreen({ navigation }: Props) {
     password: '',
     confirmPassword: '',
   });
+
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<FormErrors>({});
-const [successDialog, setSuccessDialog] = useState(false);
+  const [successDialog, setSuccessDialog] = useState(false);
+
   const validateForm = () => {
     const newErrors: FormErrors = {};
 
@@ -49,13 +58,18 @@ const [successDialog, setSuccessDialog] = useState(false);
     if (!formData.password.trim()) {
       newErrors.password = 'Password is required';
     } else if (formData.password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
+      newErrors.password =
+        'Password must be at least 6 characters';
     }
 
     if (!formData.confirmPassword.trim()) {
-      newErrors.confirmPassword = 'Confirm password is required';
-    } else if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match';
+      newErrors.confirmPassword =
+        'Confirm password is required';
+    } else if (
+      formData.password !== formData.confirmPassword
+    ) {
+      newErrors.confirmPassword =
+        'Passwords do not match';
     }
 
     setErrors(newErrors);
@@ -63,130 +77,196 @@ const [successDialog, setSuccessDialog] = useState(false);
   };
 
   const handleSignup = async () => {
-    
-
     if (!validateForm()) return;
 
     setIsLoading(true);
+
     try {
       const response = await authService.signup(
-  formData.name,
-  formData.email,
-  formData.password,
-  formData.confirmPassword  
-);
+        formData.name,
+        formData.email,
+        formData.password,
+        formData.confirmPassword
+      );
 
+      if (response?.token) {
+        await AsyncStorage.setItem(
+          'userToken',
+          response.token
+        );
+        await AsyncStorage.setItem(
+          'user',
+          JSON.stringify(response.user)
+        );
 
-      if (response && response.token) {
-        await AsyncStorage.setItem('userToken', response.token);
-        await AsyncStorage.setItem('user', JSON.stringify(response.user));
         setSuccessDialog(true);
-        navigation.replace('ProjectInfo');
-      } else if (response && response.message) {
+
+        setTimeout(() => {
+          navigation.replace('ProjectInfo');
+        }, 900);
+      } else if (response?.message) {
         Alert.alert('Signup Failed', response.message);
       } else {
-        Alert.alert('Signup Failed', 'Failed to create account');
+        Alert.alert(
+          'Signup Failed',
+          'Failed to create account'
+        );
       }
     } catch (error: any) {
-      console.error('Signup error:', error);
-      const errorMessage = 
-        error?.response?.data?.message || 
-        error?.message || 
+      const errorMessage =
+        error?.response?.data?.message ||
+        error?.message ||
         'An error occurred during signup';
+
       Alert.alert('Signup Failed', errorMessage);
     } finally {
       setIsLoading(false);
     }
-    
   };
 
   return (
     <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Create Account</Text>
-        <Text style={styles.subtitle}>Join BioLens</Text>
-      </View>
-    {successDialog && (
-  <View style={styles.dialogOverlay}>
-    <View style={styles.dialogBox}>
-      <Text style={styles.dialogText}>Signed up successfully</Text>
-      <TouchableOpacity 
-        style={styles.dialogButton} 
-        onPress={() => setSuccessDialog(false)}
+      <Animated.View
+        entering={FadeInDown.duration(650)}
+        style={styles.hero}
       >
-        <Text style={styles.dialogButtonText}>OK</Text>
-      </TouchableOpacity>
-    </View>
-  </View>
-)}
+        <Text style={styles.title}>Create Account</Text>
+        <Text style={styles.subtitle}>
+          Join the BioLens intelligence ecosystem
+        </Text>
+      </Animated.View>
 
-      <View style={styles.form}>
-        <Text style={styles.label}>Full Name</Text>
-        <TextInput
-          style={[styles.input, errors.name && styles.inputError]}
-          placeholder="Enter your full name"
-          placeholderTextColor="#999"
-          value={formData.name}
-          onChangeText={(text) => setFormData({ ...formData, name: text })}
-          editable={!isLoading}
-        />
-        {errors.name && <Text style={styles.errorText}>{errors.name}</Text>}
-
-        <Text style={styles.label}>Email</Text>
-        <TextInput
-          style={[styles.input, errors.email && styles.inputError]}
-          placeholder="Enter your email"
-          placeholderTextColor="#999"
-          value={formData.email}
-          onChangeText={(text) => setFormData({ ...formData, email: text })}
-          editable={!isLoading}
-          keyboardType="email-address"
-          autoCapitalize="none"
-        />
-        {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
-
-        <Text style={styles.label}>Password</Text>
-        <TextInput
-          style={[styles.input, errors.password && styles.inputError]}
-          placeholder="Enter your password"
-          placeholderTextColor="#999"
-          value={formData.password}
-          onChangeText={(text) => setFormData({ ...formData, password: text })}
-          editable={!isLoading}
-          secureTextEntry
-        />
-        {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
-
-        <Text style={styles.label}>Confirm Password</Text>
-        <TextInput
-          style={[styles.input, errors.confirmPassword && styles.inputError]}
-          placeholder="Confirm your password"
-          placeholderTextColor="#999"
-          value={formData.confirmPassword}
-          onChangeText={(text) => setFormData({ ...formData, confirmPassword: text })}
-          editable={!isLoading}
-          secureTextEntry
-        />
-        {errors.confirmPassword && <Text style={styles.errorText}>{errors.confirmPassword}</Text>}
-
-        <TouchableOpacity
-          style={[styles.button, isLoading && styles.buttonDisabled]}
-          onPress={handleSignup}
-          disabled={isLoading}
+      {successDialog && (
+        <Animated.View
+          entering={FadeInDown.duration(400)}
+          style={styles.dialogOverlay}
         >
-          {isLoading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.buttonText}>Sign Up</Text>
-          )}
-        </TouchableOpacity>
-
-        <TouchableOpacity onPress={() => navigation.navigate('Login')} disabled={isLoading}>
-          <Text style={styles.link}>
-            Already have an account? <Text style={styles.linkBold}>Login</Text>
+          <Text style={styles.dialogText}>
+            🎉 Signed up successfully
           </Text>
-        </TouchableOpacity>
-      </View>
+        </Animated.View>
+      )}
+
+      <Animated.View entering={FadeInUp.duration(700)}>
+        <GlassCard style={styles.formCard}>
+          <Text style={styles.formTitle}>
+            Start Your Research Journey
+          </Text>
+          <Text style={styles.formSubtitle}>
+            Create your secure BioLens account to unlock AI-driven
+            diatom intelligence.
+          </Text>
+
+          <Text style={styles.label}>Full Name</Text>
+          <TextInput
+            style={[styles.input, errors.name && styles.inputError]}
+            placeholder="Dr. Dhivakar"
+            placeholderTextColor="#9ca3af"
+            value={formData.name}
+            onChangeText={(text) =>
+              setFormData({ ...formData, name: text })
+            }
+            editable={!isLoading}
+          />
+          {errors.name && (
+            <Text style={styles.errorText}>{errors.name}</Text>
+          )}
+
+          <Text style={styles.label}>Email</Text>
+          <TextInput
+            style={[
+              styles.input,
+              errors.email && styles.inputError,
+            ]}
+            placeholder="researcher@biolens.ai"
+            placeholderTextColor="#9ca3af"
+            value={formData.email}
+            onChangeText={(text) =>
+              setFormData({ ...formData, email: text })
+            }
+            editable={!isLoading}
+            keyboardType="email-address"
+            autoCapitalize="none"
+          />
+          {errors.email && (
+            <Text style={styles.errorText}>{errors.email}</Text>
+          )}
+
+          <Text style={styles.label}>Password</Text>
+          <TextInput
+            style={[
+              styles.input,
+              errors.password && styles.inputError,
+            ]}
+            placeholder="Minimum 6 characters"
+            placeholderTextColor="#9ca3af"
+            value={formData.password}
+            onChangeText={(text) =>
+              setFormData({ ...formData, password: text })
+            }
+            editable={!isLoading}
+            secureTextEntry
+          />
+          {errors.password && (
+            <Text style={styles.errorText}>
+              {errors.password}
+            </Text>
+          )}
+
+          <Text style={styles.label}>Confirm Password</Text>
+          <TextInput
+            style={[
+              styles.input,
+              errors.confirmPassword &&
+                styles.inputError,
+            ]}
+            placeholder="Confirm password"
+            placeholderTextColor="#9ca3af"
+            value={formData.confirmPassword}
+            onChangeText={(text) =>
+              setFormData({
+                ...formData,
+                confirmPassword: text,
+              })
+            }
+            editable={!isLoading}
+            secureTextEntry
+          />
+          {errors.confirmPassword && (
+            <Text style={styles.errorText}>
+              {errors.confirmPassword}
+            </Text>
+          )}
+
+          <TouchableOpacity
+            style={[
+              styles.button,
+              isLoading && styles.buttonDisabled,
+            ]}
+            onPress={handleSignup}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.buttonText}>
+                Create BioLens Account
+              </Text>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => navigation.navigate('Login')}
+            disabled={isLoading}
+            style={styles.loginLinkContainer}
+          >
+            <Text style={styles.link}>
+              Already registered?{' '}
+              <Text style={styles.linkBold}>Login</Text>
+            </Text>
+          </TouchableOpacity>
+        </GlassCard>
+      </Animated.View>
     </ScrollView>
   );
 }
@@ -194,108 +274,126 @@ const [successDialog, setSuccessDialog] = useState(false);
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
   },
-  header: {
-    paddingTop: 40,
-    paddingBottom: 30,
+
+  hero: {
+    paddingTop: spacing.xxl,
+    paddingBottom: spacing.xl,
     alignItems: 'center',
-    backgroundColor: '#2d5a3d',
+    backgroundColor: colors.primary,
+    borderBottomLeftRadius: 34,
+    borderBottomRightRadius: 34,
   },
+
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
+    fontSize: typography.heading2 + 4,
+    fontWeight: typography.weightBold,
     color: '#fff',
   },
+
   subtitle: {
-    fontSize: 14,
-    color: '#d0d0d0',
-    marginTop: 8,
+    fontSize: typography.body,
+    color: 'rgba(255,255,255,0.82)',
+    marginTop: spacing.xs,
   },
-  form: {
-  padding: 24,
-  maxWidth: 600,   // ✅ limit width on larger screens
-  alignSelf: 'center', // ✅ center the form horizontally
-  width: '100%',    // ✅ ensure it takes full width of its container
-},
-input: {
-  borderWidth: 1,
-  borderColor: '#ddd',
-  borderRadius: 8,
-  padding: 12,
-  fontSize: 14,
-  color: '#333',
-  backgroundColor: '#f9f9f9',
-  width: '100%',   // ✅ fill only the form container, not the whole screen
-},
+
+  formCard: {
+    marginTop: -28,
+    marginHorizontal: spacing.lg,
+    padding: spacing.xl,
+    borderRadius: 30,
+  },
+
+  formTitle: {
+    fontSize: typography.heading3,
+    fontWeight: typography.weightBold,
+    color: colors.text,
+    marginBottom: spacing.xs,
+  },
+
+  formSubtitle: {
+    color: colors.textMuted,
+    marginBottom: spacing.lg,
+    lineHeight: 22,
+  },
+
+  input: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 18,
+    padding: spacing.md,
+    fontSize: typography.body,
+    color: colors.text,
+    backgroundColor: '#fff',
+    width: '100%',
+  },
+
   label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
-    marginTop: 12,
+    fontSize: typography.small,
+    fontWeight: typography.weightSemiBold,
+    color: colors.text,
+    marginBottom: spacing.xs,
+    marginTop: spacing.md,
   },
-  
+
   inputError: {
-    borderColor: '#ff6b6b',
+    borderColor: colors.danger,
   },
+
   errorText: {
-    color: '#ff6b6b',
-    fontSize: 12,
+    color: colors.danger,
+    fontSize: typography.micro,
     marginTop: 4,
   },
+
   button: {
-    backgroundColor: '#2d5a3d',
-    borderRadius: 8,
-    padding: 16,
-    marginTop: 24,
+    backgroundColor: colors.primary,
+    borderRadius: 20,
+    padding: spacing.md,
+    marginTop: spacing.lg,
     alignItems: 'center',
   },
+
   buttonDisabled: {
     opacity: 0.6,
   },
+
   buttonText: {
     color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: typography.body,
+    fontWeight: typography.weightBold,
   },
+
   link: {
-    marginTop: 16,
+    marginTop: spacing.lg,
     textAlign: 'center',
-    color: '#666',
-    fontSize: 14,
+    color: colors.textMuted,
+    fontSize: typography.body,
   },
+
   linkBold: {
-    fontWeight: '600',
-    color: '#2d5a3d',
+    fontWeight: typography.weightBold,
+    color: colors.primary,
   },
-dialogOverlay: {
-  position: 'absolute',
-  top: 0,
-  left: 0,
-  right: 0,
-  backgroundColor: '#2d5a3d',
-  padding: 12,
-  alignItems: 'center',
-},
-dialogBox: {
-  backgroundColor: 'transparent', // banner style
-},
-dialogText: {
-  color: '#fff',
-  fontWeight: '600',
-},
 
-dialogButton: {
-  backgroundColor: '#2d5a3d',
-  paddingHorizontal: 20,
-  paddingVertical: 10,
-  borderRadius: 8,
-},
+  loginLinkContainer: {
+    marginTop: spacing.lg,
+    alignItems: 'center',
+  },
 
-dialogButtonText: {
-  color: '#fff',
-  fontWeight: '600',
-},
+  dialogOverlay: {
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.md,
+    backgroundColor: colors.primary,
+    borderRadius: 18,
+    padding: spacing.md,
+    alignItems: 'center',
+  },
 
+  dialogText: {
+    color: '#fff',
+    fontWeight: typography.weightBold,
+    fontSize: typography.body,
+  },
 });

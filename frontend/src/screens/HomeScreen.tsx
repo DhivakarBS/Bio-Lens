@@ -1,17 +1,28 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  ImageBackground,
+  SafeAreaView,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
-  View
+  View,
 } from 'react-native';
-import { RootStackParamList, User } from 'src/types/type';
+import Animated, {
+  FadeInUp,
+  FadeInDown,
+} from 'react-native-reanimated';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
+import { User } from '../types/type';
+import GlassCard from '../components/GlassCard';
+import KPICard from '../components/KPICard';
+import SectionHeader from '../components/SectionHeader';
+import { colors, spacing, typography } from '../theme';
+
+type Props = {
+  navigation: any;
+};
 
 export default function HomeScreen({ navigation }: Props) {
   const [user, setUser] = useState<User | null>(null);
@@ -20,9 +31,9 @@ export default function HomeScreen({ navigation }: Props) {
   useEffect(() => {
     const loadUser = async () => {
       try {
-        const userData = await AsyncStorage.getItem('user');
-        if (userData) {
-          setUser(JSON.parse(userData));
+        const storedUser = await AsyncStorage.getItem('user');
+        if (storedUser) {
+          setUser(JSON.parse(storedUser));
         }
       } catch (error) {
         console.error('Error loading user:', error);
@@ -30,118 +41,411 @@ export default function HomeScreen({ navigation }: Props) {
         setLoading(false);
       }
     };
+
     loadUser();
   }, []);
 
+  const tiles = useMemo(
+    () => [
+      {
+        title: 'Molecular Accuracy',
+        value: '92.7%',
+        label: 'AI confidence',
+      },
+      {
+        title: 'Real-time Load',
+        value: '14.7k',
+        label: 'Processed samples',
+      },
+      {
+        title: 'Ecosystem Impact',
+        value: 'LOW',
+        label: 'Predicted risk',
+      },
+    ],
+    []
+  );
+
   if (loading) {
     return (
-      <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#2d5a3d" />
+      <View style={styles.loaderContainer}>
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
 
   return (
-    <ImageBackground
-  source={require('../../assets/7.png')}
-  style={styles.background}
-  resizeMode="cover"
->
-  {/* Header */}
-  <View style={styles.header}>
-    <Text style={styles.logoText}>Biolens</Text>
-    
-  </View>
-  {/* Banner */}
-  <View style={styles.banner}>
-    <Text style={styles.bannerText}>
-      Welcome to BIOLENS!
-    </Text>
-  </View>
+    <SafeAreaView style={styles.root}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        <Animated.View
+          entering={FadeInDown.duration(650)}
+          style={styles.heroCard}
+        >
+          <View style={styles.heroGlow} />
 
-  {/* Main content */}
-  <View style={styles.content}>
-    <TouchableOpacity
-      style={styles.Button}
-      onPress={() => navigation.navigate('Login')}
-      activeOpacity={0.8}
-    >
-      <Text style={styles.ButtonText}>Go to Login</Text>
-    </TouchableOpacity>
-  </View>
-</ImageBackground>
+          <View style={styles.heroText}>
+            <Text style={styles.welcome}>Good Afternoon,</Text>
+            <Text style={styles.userName}>
+              {user?.name || 'Research Lead'}
+            </Text>
+            <Text style={styles.heroSubtitle}>
+              Your BioLens executive dashboard is live. Monitor river health,
+              dominant taxa, and ecological risks in real time.
+            </Text>
+          </View>
 
+          <TouchableOpacity
+            style={styles.heroAction}
+            activeOpacity={0.9}
+            onPress={() => navigation.navigate('Upload')}
+          >
+            <Text style={styles.heroActionText}>Launch New Scan</Text>
+          </TouchableOpacity>
+        </Animated.View>
+
+        <Animated.View
+          entering={FadeInUp.delay(120).duration(500)}
+          style={styles.row}
+        >
+          <KPICard
+            title="Total Samples"
+            value="482"
+            label="Historic analysis"
+            accent={colors.primary}
+          />
+          <KPICard
+            title="Latest Verdict"
+            value="CAUTION"
+            label="Corrective advisory"
+            accent={colors.caution}
+          />
+        </Animated.View>
+
+        <GlassCard style={styles.summaryCard}>
+          <SectionHeader
+            title="Executive Summary"
+            subtitle="Latest automatically ingested sample"
+          />
+          <Text style={styles.summaryBody}>
+            BioLens detected 7 dominant diatom taxa and flagged moderate
+            nutrient imbalance in the latest river sample. Recommended next
+            action: targeted field validation and upstream nutrient source
+            mapping.
+          </Text>
+        </GlassCard>
+
+        <SectionHeader
+          title="Performance Metrics"
+          subtitle="Key indicators from the last 30 days"
+        />
+
+        <View style={styles.metricGrid}>
+          {tiles.map((tile, index) => (
+            <Animated.View
+              key={tile.title}
+              entering={FadeInUp.delay(index * 120).duration(500)}
+              style={styles.metricAnimated}
+            >
+              <GlassCard style={styles.metricCard}>
+                <Text style={styles.metricTitle}>{tile.title}</Text>
+                <Text style={styles.metricValue}>{tile.value}</Text>
+                <Text style={styles.metricLabel}>{tile.label}</Text>
+              </GlassCard>
+            </Animated.View>
+          ))}
+        </View>
+
+        <SectionHeader
+          title="Recent Analysis"
+          subtitle="Latest scans and logged verdicts"
+        />
+
+        <GlassCard style={styles.timelineCard}>
+          {['River sample A', 'Lake inflow', 'Monitoring well 3'].map(
+            (item, index) => (
+              <Animated.View
+                key={item}
+                entering={FadeInUp.delay(index * 100).duration(450)}
+                style={styles.timelineRow}
+              >
+                <View style={styles.timelineBullet} />
+
+                <View style={styles.timelineTextBlock}>
+                  <Text style={styles.timelineTitle}>{item}</Text>
+                  <Text style={styles.timelineSubtitle}>
+                    {index === 0
+                      ? 'Last 22 minutes ago'
+                      : 'Within 48 hours'}
+                  </Text>
+                </View>
+
+                <View
+                  style={[
+                    styles.statusPill,
+                    index === 0
+                      ? styles.statusSafe
+                      : index === 1
+                      ? styles.statusCaution
+                      : styles.statusUnsafe,
+                  ]}
+                >
+                  <Text style={styles.statusText}>
+                    {index === 0
+                      ? 'SAFE'
+                      : index === 1
+                      ? 'CAUTION'
+                      : 'UNSAFE'}
+                  </Text>
+                </View>
+              </Animated.View>
+            )
+          )}
+        </GlassCard>
+
+        <GlassCard style={styles.quickPanel}>
+          <SectionHeader title="Need an Executive Briefing?" />
+          <Text style={styles.quickPanelText}>
+            The next scan report can be exported directly to your research
+            portfolio and IEEE documentation workflow.
+          </Text>
+
+          <TouchableOpacity
+            style={styles.quickButton}
+            activeOpacity={0.9}
+            onPress={() => navigation.navigate('History')}
+          >
+            <Text style={styles.quickButtonText}>Review History</Text>
+          </TouchableOpacity>
+        </GlassCard>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  background: {
+  root: {
     flex: 1,
+    backgroundColor: colors.background,
   },
-  centerContainer: {
+
+  content: {
+    paddingVertical: spacing.xl,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: 120,
+  },
+
+  loaderContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f8f9fa',
+    backgroundColor: colors.background,
   },
-  header: {
+
+  heroCard: {
+    backgroundColor: colors.surfaceGlass,
+    borderRadius: 34,
+    padding: spacing.xl,
+    marginBottom: spacing.lg,
+    overflow: 'hidden',
+
+    shadowColor: '#103f26',
+    shadowOffset: { width: 0, height: 20 },
+    shadowOpacity: 0.1,
+    shadowRadius: 28,
+    elevation: 10,
+  },
+
+  heroGlow: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 70,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+  },
+
+  heroText: {
+    marginBottom: spacing.lg,
+  },
+
+  welcome: {
+    color: colors.primaryDark,
+    fontSize: typography.heading2,
+    fontWeight: typography.weightBold,
+  },
+
+  userName: {
+    color: colors.text,
+    fontSize: typography.heading1,
+    fontWeight: typography.weightBold,
+    marginTop: 10,
+  },
+
+  heroSubtitle: {
+    marginTop: spacing.sm,
+    color: colors.textMuted,
+    fontSize: typography.body,
+    lineHeight: 24,
+  },
+
+  heroAction: {
+    marginTop: spacing.md,
+    backgroundColor: colors.primary,
+    borderRadius: 24,
+    paddingVertical: spacing.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+
+    shadowColor: colors.primary,
+    shadowOpacity: 0.18,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 6,
+  },
+
+  heroActionText: {
+    color: '#fff',
+    fontSize: typography.body,
+    fontWeight: typography.weightBold,
+    letterSpacing: 0.4,
+  },
+
+  row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    gap: spacing.sm,
+    marginBottom: spacing.lg,
+  },
+
+  summaryCard: {
+    marginBottom: spacing.lg,
+  },
+
+  summaryBody: {
+    marginTop: spacing.sm,
+    color: colors.textMuted,
+    fontSize: typography.body,
+    lineHeight: 24,
+  },
+
+  metricGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginBottom: spacing.lg,
+  },
+
+  metricAnimated: {
+    width: '48%',
+  },
+
+  metricCard: {
+    minHeight: 120,
+    marginBottom: spacing.sm,
+  },
+
+  metricTitle: {
+    color: colors.textMuted,
+    fontSize: typography.small,
+    marginBottom: spacing.xs,
+  },
+
+  metricValue: {
+    color: colors.primaryDark,
+    fontSize: typography.heading3,
+    fontWeight: typography.weightBold,
+  },
+
+  metricLabel: {
+    marginTop: spacing.xs,
+    color: colors.textMuted,
+    fontSize: typography.micro,
+  },
+
+  timelineCard: {
+    marginBottom: spacing.lg,
+  },
+
+  timelineRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 40, // adjust for safe area
+    gap: spacing.sm,
+    marginBottom: spacing.md,
   },
-  logoText: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#fff',
+
+  timelineBullet: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: colors.primary,
   },
-  
-  content: {
+
+  timelineTextBlock: {
     flex: 1,
-    justifyContent: 'center',
+  },
+
+  timelineTitle: {
+    color: colors.text,
+    fontSize: typography.body,
+    fontWeight: typography.weightSemiBold,
+  },
+
+  timelineSubtitle: {
+    color: colors.textMuted,
+    fontSize: typography.small,
+    marginTop: 4,
+  },
+
+  statusPill: {
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    borderRadius: 999,
+  },
+
+  statusSafe: {
+    backgroundColor: 'rgba(45,143,78,0.14)',
+  },
+
+  statusCaution: {
+    backgroundColor: 'rgba(240,167,0,0.16)',
+  },
+
+  statusUnsafe: {
+    backgroundColor: 'rgba(212,62,58,0.16)',
+  },
+
+  statusText: {
+    color: colors.text,
+    fontWeight: typography.weightBold,
+    fontSize: typography.small,
+  },
+
+  quickPanel: {
+    marginBottom: spacing.xxl,
+  },
+
+  quickPanelText: {
+    color: colors.textMuted,
+    fontSize: typography.body,
+    marginBottom: spacing.md,
+    lineHeight: 22,
+  },
+
+  quickButton: {
+    backgroundColor: colors.accentDeep,
+    paddingVertical: spacing.md,
+    borderRadius: 24,
     alignItems: 'center',
-   // paddingHorizontal: 20,
   },
-  welcomeText: {
-    fontSize: 100,
-    color: '#2d5a3d',
-    //marginBottom: 24,
-    textAlign: 'center',
-    marginTop:20,
-    fontWeight: 'bold',
-  },
- Button: {
-  backgroundColor: '#2d5a3d',
-  paddingVertical: 14,
-  paddingHorizontal: 32,
-  borderRadius: 12,
-  alignSelf: 'center',   // centers horizontally
-  marginTop: 10,         // adjust spacing above
-  marginBottom: -10,     // optional: pulls it slightly upward
-},
 
-  ButtonText: {
+  quickButtonText: {
     color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: typography.body,
+    fontWeight: typography.weightBold,
+    letterSpacing: 0.4,
   },
-  banner: {
-  marginTop: 20,
-  marginHorizontal: 16,
-  paddingVertical: 18,
-  paddingHorizontal: 20,
-  borderRadius: 14,
-  alignItems: 'center',
-},
-
-bannerText: {
-  fontSize: 90,
-  fontWeight: '800',
-  color: '#2d5a3d',
-  textAlign: 'center',
-  letterSpacing: 1,
-},
-
 });
-
