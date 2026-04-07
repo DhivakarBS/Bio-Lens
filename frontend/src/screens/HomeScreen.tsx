@@ -208,8 +208,8 @@ export default function HomeScreen({ navigation }: Props) {
         <GlassCard style={styles.quickPanel}>
           <SectionHeader title="Need an Executive Briefing?" />
           <Text style={styles.quickPanelText}>
-            The next scan report can be exported directly to your research
-            portfolio and IEEE documentation workflow.
+            {/* The next scan report can be exported directly to your research
+            portfolio and IEEE documentation workflow. */}
           </Text>
 
           <TouchableOpacity
@@ -234,7 +234,7 @@ const styles = StyleSheet.create({
   content: {
     paddingVertical: spacing.xl,
     paddingHorizontal: spacing.lg,
-    paddingBottom: 120,
+    paddingBottom: 140,
   },
 
   loaderContainer: {

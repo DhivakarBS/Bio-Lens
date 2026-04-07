@@ -298,7 +298,7 @@ const styles = StyleSheet.create({
 
   scrollContent: {
     paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.xxl + 50,
+    paddingBottom: 140,
   },
 
   dropZone: {
