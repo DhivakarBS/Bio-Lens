@@ -65,7 +65,7 @@ export default function LoginScreen({ navigation }: Props) {
           JSON.stringify(response.user)
         );
 
-        navigation.navigate('ProjectInfo');
+        navigation.navigate('Home');
       } else {
         Alert.alert(
           'Login Failed',
@@ -94,7 +94,7 @@ export default function LoginScreen({ navigation }: Props) {
         entering={FadeInDown.duration(650)}
         style={styles.hero}
       >
-        <TouchableOpacity
+        {/* <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.navigate('Home')}
         >
@@ -103,7 +103,7 @@ export default function LoginScreen({ navigation }: Props) {
             size={24}
             color={colors.primary}
           />
-        </TouchableOpacity>
+        </TouchableOpacity> */}
 
         <Text style={styles.title}>BioLens</Text>
         <Text style={styles.subtitle}>
@@ -185,14 +185,14 @@ export default function LoginScreen({ navigation }: Props) {
             </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
+          {/* <TouchableOpacity
             onPress={() => navigation.navigate('AdminLogin')}
             style={styles.adminLink}
           >
             <Text style={styles.adminLinkText}>
               Secure Admin Access
             </Text>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
         </GlassCard>
       </Animated.View>
     </ScrollView>

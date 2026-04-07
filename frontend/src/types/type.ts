@@ -107,4 +107,5 @@ export type RootStackParamList = {
   AdminDashboard: undefined;
   UserTabs: undefined;
   ProjectInfo: undefined;
+  MainHome: undefined;
 };

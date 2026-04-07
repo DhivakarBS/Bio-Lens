@@ -7,7 +7,7 @@ import { colors } from '../theme';
 // Import ALL screens
 import BottomTabs from './BottomTabs';
 import LoginScreen from '../screens/LoginScreen';
-
+import MainHome from '../screens/MainHome';
 import HistoryScreen from 'src/screens/HistoryScreen';
 import ProfileScreen from 'src/screens/ProfileScreen';
 import ResultScreen from 'src/screens/ResultScreen';
@@ -20,12 +20,13 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 export default function AppNavigator() {
   return (
     <Stack.Navigator
-      initialRouteName="Login"
+      initialRouteName="MainHome"
       screenOptions={{ headerShown: false }}
     >
       <Stack.Screen name="Home" component={BottomTabs} />
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="Signup" component={SignupScreen} />
+      <Stack.Screen name="MainHome" component={MainHome} />
       <Stack.Screen 
         name="ProjectInfo" 
         component={ProjectInfoScreen} 

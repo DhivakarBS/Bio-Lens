@@ -20,7 +20,7 @@ import { colors, spacing, typography } from '../theme';
 
 type RootStackParamList = {
   ProjectInfo: undefined;
-  Upload: undefined;
+  Home: undefined;
 };
 
 type NavigationProp = NativeStackNavigationProp<
@@ -84,8 +84,7 @@ const ProjectInfoScreen = () => {
 
         <Text style={styles.bodyText}>
           BioLens is an AI-based environmental monitoring system
-          that uses Convolutional Neural Networks (CNN) and YOLO
-          object detection to identify and analyze diatom species
+          that uses YOLO object detection to identify and analyze diatom species
           from microscopic imagery. The platform automatically
           detects taxa patterns and translates them into reliable
           ecological risk intelligence for proactive water quality
@@ -152,11 +151,11 @@ const ProjectInfoScreen = () => {
 
       <TouchableOpacity
         style={styles.button}
-        onPress={() => navigation.navigate('Upload')}
+        onPress={() => navigation.navigate('Home')}
         activeOpacity={0.9}
       >
         <Text style={styles.buttonText}>
-          Continue to AI Scan Lab →
+          Continue to Explore
         </Text>
       </TouchableOpacity>
     </ScrollView>

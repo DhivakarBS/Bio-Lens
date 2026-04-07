@@ -87,7 +87,7 @@ export default function HomeScreen({ navigation }: Props) {
           <View style={styles.heroGlow} />
 
           <View style={styles.heroText}>
-            <Text style={styles.welcome}>Good Afternoon,</Text>
+            <Text style={styles.welcome}>Welcome to BioLens!</Text>
             <Text style={styles.userName}>
               {user?.name || 'Research Lead'}
             </Text>

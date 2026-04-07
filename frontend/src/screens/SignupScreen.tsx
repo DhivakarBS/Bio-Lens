@@ -160,7 +160,7 @@ export default function SignupScreen({ navigation }: Props) {
           <Text style={styles.label}>Full Name</Text>
           <TextInput
             style={[styles.input, errors.name && styles.inputError]}
-            placeholder="Dr. Dhivakar"
+            placeholder="Enter your name"
             placeholderTextColor="#9ca3af"
             value={formData.name}
             onChangeText={(text) =>
