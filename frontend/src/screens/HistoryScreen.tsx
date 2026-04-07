@@ -39,6 +39,7 @@ interface HistoryRecord {
   _id: string;
   predictedClass: string;
   confidence: number;
+  wqi?: number;
   createdAt: string;
 }
 
@@ -107,10 +108,10 @@ export default function HistoryScreen({ navigation }: Props) {
   }) => {
     const result: ClassificationResult = {
       verdict: item.predictedClass,
-      waterQualityIndex: item.confidence,
+      waterQualityIndex: item.wqi || 0,
       totalDiatoms: 0,
       speciesBreakdown: {},
-      confidenceScores: {},
+      confidenceScores: { overall: item.confidence },
       recordId: item._id,
       timestamp: item.createdAt,
       className: item.predictedClass,
@@ -169,14 +170,14 @@ export default function HistoryScreen({ navigation }: Props) {
             <GlassCard style={styles.metricPill}>
               <Text style={styles.metricLabel}>WQI</Text>
               <Text style={styles.metricValue}>
-                {Math.round(item.confidence)}
+                {Math.round(item.wqi || 0)}
               </Text>
             </GlassCard>
 
             <GlassCard style={styles.metricPill}>
               <Text style={styles.metricLabel}>Confidence</Text>
               <Text style={styles.metricValue}>
-                {Math.round((item.confidence / 10) * 100)}%
+                {Math.round(item.confidence * 100)}%
               </Text>
             </GlassCard>
           </View>

@@ -86,7 +86,8 @@ const classifyImage = async (req, res) => {
       userId,
       imageUrl: `data:image/jpeg;base64,${imageBase64.substring(0, 100)}...`,
       predictedClass: classification.verdict,
-      confidence: classification.waterQualityIndex,
+      confidence: classification.confidenceScores.overall || 0,
+      wqi: classification.waterQualityIndex,
     });
     await record.save();
   } catch (saveError) {
