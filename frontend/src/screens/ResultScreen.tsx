@@ -1,13 +1,12 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import {
-  Dimensions,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
-import { PieChart, ProgressChart } from 'react-native-chart-kit';
+import { PieChart } from 'react-native-chart-kit';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 
 import GlassCard from '../components/GlassCard';
@@ -18,8 +17,6 @@ import { colors, spacing, typography } from '../theme';
 import { RootStackParamList } from '../types/type';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Result'>;
-
-const screenWidth = Dimensions.get('window').width - 48;
 
 export default function ResultScreen({ navigation, route }: Props) {
   const { result } = route.params;
@@ -32,38 +29,17 @@ export default function ResultScreen({ navigation, route }: Props) {
 
   const speciesBreakdown = result.speciesBreakdown || {};
   const confidenceScores = result.confidenceScores || {};
-  const normalizedWQI = Math.min(
-    Math.max(waterQualityIndex / 100, 0),
-    1
-  );
+
   const speciesEntries = Object.entries(speciesBreakdown);
 
-const dominantSpecies =
-  speciesEntries.length > 0
-    ? speciesEntries.reduce((max, current) =>
-        Number(current[1]) > Number(max[1]) ? current : max
-      )[0]
-    : 'Unknown';
-  const totalSpeciesCount = speciesEntries.reduce(
-  (sum, [, count]) => sum + Number(count),
-  0
-);
-
-const dominantCount =
-  speciesEntries.length > 0
-    ? Number(
-        speciesEntries.reduce((max, current) =>
+  const dominantSpecies =
+    speciesEntries.length > 0
+      ? speciesEntries.reduce((max, current) =>
           Number(current[1]) > Number(max[1]) ? current : max
-        )[1]
-      )
-    : 0;
+        )[0]
+      : 'Unknown';
 
-const derivedConfidence =
-  totalSpeciesCount > 0
-    ? Math.round((dominantCount / totalSpeciesCount) * 100)
-    : 0;
-
-  const speciesChart = Object.entries(speciesBreakdown).map(
+  const speciesChart = speciesEntries.map(
     ([name, count], index) => ({
       name,
       population: Number(count),
@@ -149,19 +125,19 @@ const derivedConfidence =
 
           {speciesChart.length > 0 ? (
             <>
-             <View style={styles.chartContainer}>
-              <PieChart
-                data={speciesChart}
-                width={300}
-                height={220}
-                chartConfig={chartConfig}
-                accessor="population"
-                backgroundColor="transparent"
-                paddingLeft="40"
-                absolute
-                hasLegend={false}
-              />
-            </View>
+              <View style={styles.chartContainer}>
+                <PieChart
+                  data={speciesChart}
+                  width={300}
+                  height={220}
+                  chartConfig={chartConfig}
+                  accessor="population"
+                  backgroundColor="transparent"
+                  paddingLeft="40"
+                  absolute
+                  hasLegend={false}
+                />
+              </View>
 
               <View style={styles.legendWrapper}>
                 {speciesChart.map((item) => (
@@ -187,8 +163,10 @@ const derivedConfidence =
         <View style={styles.sideColumn}>
           <KPICard
             title="Confidence"
-            value={`${derivedConfidence}%`}
-            label="Dominance strength"
+            value={`${Math.round(
+              (confidenceScores.overall ?? 0) * 100
+            )}%`}
+            label="AI certainty"
             accent={colors.accentDeep}
           />
 
@@ -200,29 +178,6 @@ const derivedConfidence =
           />
         </View>
       </View>
-
-      {/* <GlassCard style={styles.progressCard}>
-        <SectionHeader
-          title="Ecological Health Meter"
-          subtitle="Normalized ecosystem performance"
-        />
-
-        <ProgressChart
-          data={{ data: [normalizedWQI] }}
-          width={screenWidth}
-          height={180}
-          strokeWidth={14}
-          radius={54}
-          chartConfig={chartConfig}
-          hideLegend
-        />
-
-        <Text style={styles.qualityText}>
-          {`${Math.round(
-            normalizedWQI * 100
-          )}% of ideal ecosystem score`}
-        </Text>
-      </GlassCard> */}
 
       <SectionHeader
         title="Recommended Actions"
@@ -320,13 +275,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 
- chartContainer: {
-  width: '100%',
-  alignItems: 'center',
-  justifyContent: 'center',
-  marginTop: spacing.sm,
-  paddingLeft: 20,
-},
+  chartContainer: {
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: spacing.sm,
+    paddingLeft: 20,
+  },
 
   legendWrapper: {
     flexDirection: 'row',
@@ -359,17 +314,6 @@ const styles = StyleSheet.create({
   naText: {
     color: colors.textMuted,
     fontSize: typography.body,
-  },
-
-  progressCard: {
-    marginBottom: spacing.lg,
-  },
-
-  qualityText: {
-    marginTop: spacing.md,
-    color: colors.textMuted,
-    fontSize: typography.body,
-    textAlign: 'center',
   },
 
   insightCard: {

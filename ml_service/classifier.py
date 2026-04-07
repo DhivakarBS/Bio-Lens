@@ -1,26 +1,38 @@
 import os
 from ultralytics import YOLO
 
-# Full master tolerance score dictionary (BioLens research levels)
+
+
 TOLERANCE_SCORES = {
-    "Planothidium": 1,
-    "Cocconeis": 1,
-    "Cymbella": 1,
-    "Navicula": 3,
-    "Cyclotella": 3,
-    "Fragilaria": 3,
-    "Gomphonema": 4,
-    "Nitzschia": 5,
-    "Achnanthidium": 2,
-    "Amphora": 4,
-    "Bacillariopsis": 4,
-    "Eunotia": 2,
-    "Melosira": 3,
-    "Stephanodiscus": 4,
-    "Surirella": 3,
-    "Ulnaria": 2,
+    "Achnanthes": 1, "Brachysira": 1, "Nitzschia": 1, "Cocconeis": 1, "Cymbella": 1, 
+    "Cymbopleura": 1, "Encyonema": 1, "Hannaea": 1, "Karayevia": 1, 
+    "Meridion": 1, "Planothidium": 1, "Psammothidium": 1, "Stauroneis": 1, 
+    "Tabellaria": 1,
+
+    "Achnanthidium": 2, "Adlafia": 2, "Ctenophora": 2, "Diploneis": 2, 
+    "Encyonopsis": 2, "Eunotia": 2, "Fallacia": 2, "Frustulia": 2, 
+    "Geissleria": 2, "Gomphosphenia": 2, "Gyrosigilla": 2, "Lemnicola": 2, 
+    "Pinnularia": 2, "Platessa": 2, "Rossithidium": 2, "Ulnaria": 2,
+
+    "Asterionella": 3, "Aulacoseira": 3, "Cyclotella": 3, "Diadesmis": 3, 
+    "Diatoma": 3, "Fragilaria": 3, "Hippodonta": 3, "Melosira": 3, 
+    "Navicula": 3, "Neidium": 3, "Placoneis": 3, "Pleurosigma": 3, 
+    "Puncticulata": 3, "Reimeria": 3, "Staurosira": 3, "Surirella": 3,
+
+    "Amphora": 4, "Bacillariopsis": 4, "Cymatopleura": 4, "Denticula": 4, 
+    "Discostella": 4, "Gomphonema": 4, "Hantzschia": 4, "Luticola": 4, 
+    "Mayamaia": 4, "Rhoicosphenia": 4, "Rhopalodia": 4, "Stephanodiscus": 4, 
+    "Tryblionella": 4,
+
+    "Craticula": 5, "Eolimna": 5, "Fistulifera": 5,  
+    "Sellaphora": 5,
+
     "Unknown": 3,
+    "Other": 3
 }
+
+# Note: This dictionary is used by the classificationController.js 
+# and main.py to calculate the final Water Quality Index (WQI).
 
 
 class DiatomClassifier:
@@ -133,6 +145,12 @@ class DiatomClassifier:
             species: round(sum(scores) / len(scores), 4)
             for species, scores in confidence_accum.items()
         }
+
+        overall_confidence = round(
+            sum(sum(scores) for scores in confidence_accum.values()) /
+            sum(len(scores) for scores in confidence_accum.values()),
+            4
+        )
         
         # compute WQI via weighted tolerance values
         total_score = 0.0
@@ -152,7 +170,10 @@ class DiatomClassifier:
         return {
             "totalDiatoms": total_diatoms,
             "speciesBreakdown": class_counts,
-            "confidenceScores": average_confidence_scores,
+            "confidenceScores": {
+                **average_confidence_scores,
+                "overall": overall_confidence
+            },
             "waterQualityIndex": water_quality_index,
             "verdict": verdict,
         }

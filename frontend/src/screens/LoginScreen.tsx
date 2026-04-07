@@ -85,7 +85,11 @@ export default function LoginScreen({ navigation }: Props) {
   };
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.scrollContent}
+      showsVerticalScrollIndicator={false}
+    >
       <Animated.View
         entering={FadeInDown.duration(650)}
         style={styles.hero}
@@ -107,11 +111,15 @@ export default function LoginScreen({ navigation }: Props) {
         </Text>
       </Animated.View>
 
-      <Animated.View entering={FadeInUp.duration(700)}>
+      <Animated.View
+        entering={FadeInUp.duration(700)}
+        style={styles.formWrapper}
+      >
         <GlassCard style={styles.formCard}>
           <Text style={styles.formTitle}>Welcome Back</Text>
           <Text style={styles.formSubtitle}>
-            Sign in to access your environmental intelligence dashboard
+            Sign in to access your environmental intelligence
+            dashboard
           </Text>
 
           <Text style={styles.label}>Email Address</Text>
@@ -171,7 +179,9 @@ export default function LoginScreen({ navigation }: Props) {
           >
             <Text style={styles.link}>
               New to BioLens?{' '}
-              <Text style={styles.linkBold}>Create Account</Text>
+              <Text style={styles.linkBold}>
+                Create Account
+              </Text>
             </Text>
           </TouchableOpacity>
 
@@ -195,6 +205,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
 
+  scrollContent: {
+    paddingBottom: spacing.xxl,
+  },
+
   hero: {
     paddingTop: spacing.xxl + 20,
     paddingBottom: spacing.xl,
@@ -202,6 +216,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     borderBottomLeftRadius: 34,
     borderBottomRightRadius: 34,
+  },
+
+  formWrapper: {
+    alignItems: 'center',
   },
 
   title: {
@@ -218,10 +236,13 @@ const styles = StyleSheet.create({
   },
 
   formCard: {
-    marginTop: -30,
-    marginHorizontal: spacing.lg,
-    padding: spacing.xl,
-    borderRadius: 30,
+    marginTop: 24,
+    width: '88%',
+    maxWidth: 460,
+    alignSelf: 'center',
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    borderRadius: 28,
   },
 
   formTitle: {
