@@ -55,7 +55,7 @@ function TabButton(props: BottomTabBarButtonProps) {
       style={[styles.tabButton, animatedStyle as any]}
     >
       <TouchableOpacity
-        onPress={() => onPress?.()}
+        onPress={onPress}
         activeOpacity={0.85}
         style={styles.tabTouch}
       >

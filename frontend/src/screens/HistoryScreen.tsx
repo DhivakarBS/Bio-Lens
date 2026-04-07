@@ -281,7 +281,7 @@ const styles = StyleSheet.create({
 
   listContent: {
     paddingHorizontal: spacing.md,
-    paddingBottom: spacing.xxl,
+    paddingBottom: 140,
   },
 
   historyCard: {
@@ -402,7 +402,7 @@ const styles = StyleSheet.create({
 
   footer: {
     paddingHorizontal: spacing.md,
-    paddingBottom: spacing.xl,
+    paddingBottom: 140,
   },
 
   footerButton: {

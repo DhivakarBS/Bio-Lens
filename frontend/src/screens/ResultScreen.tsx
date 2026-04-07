@@ -250,7 +250,7 @@ const styles = StyleSheet.create({
 
   contentContainer: {
     padding: spacing.lg,
-    paddingBottom: spacing.xxl,
+    paddingBottom: 140,
   },
 
   dashboardRow: {
